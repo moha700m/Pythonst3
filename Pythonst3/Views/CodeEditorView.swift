@@ -90,7 +90,7 @@ final class CodeEditorContainerView: UIView {
         textView.textContainerInset = UIEdgeInsets(top: 10, left: 8, bottom: 24, right: 8)
         textView.textContainer.lineFragmentPadding = 0
         textView.textAlignment = .left
-        textView.semanticContentAttribute = .forceLTR
+        textView.semanticContentAttribute = .forceLeftToRight
         textView.tintColor = UIColor(CyberTheme.neonGreen)
         textView.indicatorStyle = .white
         textView.font = font
