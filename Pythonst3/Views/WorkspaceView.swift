@@ -11,10 +11,12 @@ struct WorkspaceView: View {
 
     @State private var consoleExpanded = false
     @State private var showFiles = false
+    @State private var showSearch = false
     @State private var showNewFile = false
     @State private var newFileName = ""
     @State private var cursorLine = 1
     @State private var cursorColumn = 1
+    @State private var errorLine: Int?
 
     var body: some View {
         GeometryReader { proxy in
@@ -49,6 +51,16 @@ struct WorkspaceView: View {
                 }
             }
         }
+        .onChange(of: runtime.lastError) { location in
+            guard let location else {
+                errorLine = nil
+                return
+            }
+            if app.files.contains(where: { $0.path == location.file }) {
+                app.selectFile(location.file)
+            }
+            errorLine = location.line
+        }
         .onChange(of: runtime.pendingInput?.id) { _ in
             if runtime.pendingInput != nil {
                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -65,6 +77,9 @@ struct WorkspaceView: View {
         }
         .sheet(isPresented: $showFiles) {
             FileListView()
+        }
+        .sheet(isPresented: $showSearch) {
+            FindReplaceView()
         }
         .alert("ملف جديد", isPresented: $showNewFile) {
             TextField("utils.py", text: $newFileName)
@@ -171,6 +186,11 @@ struct WorkspaceView: View {
                     showNewFile = true
                 } label: {
                     Label("ملف جديد", systemImage: "doc.badge.plus")
+                }
+                Button {
+                    showSearch = true
+                } label: {
+                    Label("بحث واستبدال", systemImage: "magnifyingglass")
                 }
                 Button {
                     _ = app.pasteClipboardIntoActiveFile()
@@ -355,7 +375,9 @@ struct WorkspaceView: View {
                         cursorColumn = column
                     },
                     onRun: { app.runActive() },
-                    onMessage: { message in app.showMessage(message) }
+                    onMessage: { message in app.showMessage(message) },
+                    selectionRequest: app.editorSelection,
+                    errorLine: errorLine
                 )
             } else {
                 emptyEditor

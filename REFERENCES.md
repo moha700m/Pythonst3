@@ -38,3 +38,26 @@ No dependency is approved solely because it appears in this list. Before bundlin
 3. Verify iOS or browser compatibility.
 4. Record package size, update process and security posture.
 5. Add a test that proves the claimed feature works.
+
+## Benchmarks reviewed for this iteration
+
+Checked on 2026-11-14 through the GitHub API. Every item below informed architecture
+or UX decisions only; no source code, assets, or branding were copied.
+
+| Project | License | What was learned | Used how |
+|---|---|---|---|
+| [Pyto](https://github.com/ColdGrub1384/Pyto) | MIT | Embedding CPython via Python-Apple-support, bundling wheels, exposing a Python module to Swift | Architecture reference only |
+| [Python-Apple-support](https://github.com/beeware/Python-Apple-support) | MIT | Prebuilt CPython XCFramework layout, `lib-dynload` handling | Runtime binary is pinned and verified by SHA-256 |
+| [Runestone](https://github.com/simonbs/Runestone) | MIT | TextKit 2 tree-sitter editing and large-file performance strategy | Considered; current editor keeps UITextView for iOS 16 support |
+| [CodeEditorView](https://github.com/mchakravarty/CodeEditorView) | Apache-2.0 | SwiftUI ↔ UITextView bridging, selection and undo patterns | Pattern reference; implementation is original |
+| Pythonista | Closed source | Product expectations for a mobile Python IDE | Not used; no code or assets |
+
+### Why the editor was not replaced with CodeMirror 6
+
+A WKWebView editor would add a second rendering stack, break native selection and
+keyboard behaviour, and complicate undo/selection bridging. The shipped editor is a
+native `UITextView` with Python highlighting, line numbers, smart indentation,
+bracket pairing, find/replace, and selection requests from native UI. This keeps
+the app offline, fast, and consistent with iOS text services. A WebView editor
+remains a documented option if multi-cursor or tree-sitter parsing becomes a hard
+requirement.

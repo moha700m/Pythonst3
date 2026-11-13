@@ -7,6 +7,8 @@ struct CodeEditorView: UIViewRepresentable {
     var onCursorChange: (Int, Int) -> Void = { _, _ in }
     var onRun: () -> Void = {}
     var onMessage: (String) -> Void = { _ in }
+    var selectionRequest: NSRange? = nil
+    var errorLine: Int? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -31,6 +33,11 @@ struct CodeEditorView: UIViewRepresentable {
         if uiView.textView.text != text {
             uiView.setText(text)
         }
+        if let request = selectionRequest, request != context.coordinator.lastSelectionRequest {
+            context.coordinator.lastSelectionRequest = request
+            uiView.select(range: request)
+        }
+        uiView.setErrorLine(errorLine)
     }
 
     final class Coordinator: NSObject, UITextViewDelegate {
@@ -38,6 +45,7 @@ struct CodeEditorView: UIViewRepresentable {
         weak var container: CodeEditorContainerView?
         private var highlightWorkItem: DispatchWorkItem?
         private var isApplyingEdit = false
+        var lastSelectionRequest: NSRange?
 
         init(_ parent: CodeEditorView) {
             self.parent = parent
@@ -167,6 +175,7 @@ final class CodeEditorContainerView: UIView {
         frame: CGRect(x: 0, y: 0, width: 320, height: 44)
     )
     private var font = UIFont.monospacedSystemFont(ofSize: 14, weight: .regular)
+    private var errorLine: Int?
 
     var onRun: (() -> Void)?
     var onMessage: ((String) -> Void)?
@@ -257,6 +266,47 @@ final class CodeEditorContainerView: UIView {
         refreshChrome()
     }
 
+    func setErrorLine(_ line: Int?) {
+        guard line != errorLine else { return }
+        errorLine = line
+        applyHighlight()
+        if let line, let range = rangeOfLine(line) {
+            textView.scrollRangeToVisible(range)
+        }
+    }
+
+    private func rangeOfLine(_ number: Int) -> NSRange? {
+        guard number > 0 else { return nil }
+        let content = (textView.text ?? "") as NSString
+        var current = 1
+        var location = 0
+        while current < number {
+            guard location < content.length else { return nil }
+            let found = content.range(
+                of: "\n",
+                options: [],
+                range: NSRange(location: location, length: content.length - location)
+            )
+            if found.location == NSNotFound { return nil }
+            location = found.location + 1
+            current += 1
+        }
+        let remaining = NSRange(location: location, length: content.length - location)
+        let newline = content.range(of: "\n", options: [], range: remaining)
+        let length = newline.location == NSNotFound ? content.length - location : newline.location - location
+        return NSRange(location: location, length: length)
+    }
+
+    func select(range: NSRange) {
+        let length = ((textView.text ?? "") as NSString).length
+        let location = min(max(0, range.location), length)
+        let safeLength = min(max(0, range.length), length - location)
+        let safe = NSRange(location: location, length: safeLength)
+        textView.becomeFirstResponder()
+        textView.selectedRange = safe
+        textView.scrollRangeToVisible(safe)
+    }
+
     func refreshChrome() {
         placeholderLabel.isHidden = !(textView.text ?? "").isEmpty
         lineNumbers.refresh()
@@ -274,6 +324,13 @@ final class CodeEditorContainerView: UIView {
 
         storage.beginEditing()
         storage.setAttributedString(highlighted)
+        if let errorLine, let range = rangeOfLine(errorLine) {
+            storage.addAttribute(
+                .backgroundColor,
+                value: UIColor(CyberTheme.danger).withAlphaComponent(0.16),
+                range: range
+            )
+        }
         storage.endEditing()
 
         let length = (content as NSString).length

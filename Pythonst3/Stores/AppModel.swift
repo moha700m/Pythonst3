@@ -34,6 +34,7 @@ final class AppModel: ObservableObject {
     @Published var showingExporter = false
     @Published var exportDocument: ProjectDocument?
     @Published var exportFilename = "project.pythonst3"
+    @Published var editorSelection: NSRange?
     @Published var pendingProposal: CodeProposal?
     @Published var agentUndo: AgentUndo?
 
@@ -165,9 +166,9 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func createProject(named name: String) {
+    func createProject(named name: String, template: ProjectTemplate = .starter) {
         do {
-            let project = try store.createProject(name: name)
+            let project = try store.createProject(name: name, template: template)
             reloadProjects()
             open(project)
         } catch {

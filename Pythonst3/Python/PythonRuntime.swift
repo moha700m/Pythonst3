@@ -1,6 +1,11 @@
 import Foundation
 import Darwin
 
+struct ErrorLocation: Equatable {
+    let file: String
+    let line: Int
+}
+
 enum RuntimeState: Equatable {
     case idle
     case preparing
@@ -33,6 +38,7 @@ final class PythonRuntime: ObservableObject {
     @Published private(set) var pythonVersion: String = "—"
     @Published private(set) var lastExitCode: Int32 = 0
     @Published var pendingInput: InputRequest?
+    @Published private(set) var lastError: ErrorLocation?
 
     private let queue = DispatchQueue(label: "com.moha700m.pythonst3.runtime", qos: .userInitiated)
     private var initialized = false
@@ -75,6 +81,7 @@ final class PythonRuntime: ObservableObject {
         inputLock.unlock()
 
         flushBuffers()
+        lastError = nil
         append("▶ \(filename)", kind: .command)
         state = .running
 
@@ -105,6 +112,7 @@ final class PythonRuntime: ObservableObject {
             DispatchQueue.main.async {
                 self.flushBuffers()
                 self.lastExitCode = status
+                self.lastError = status == 1 ? self.parseErrorLocation() : nil
                 switch status {
                 case 0:
                     self.append("✓ انتهى التنفيذ", kind: .success)
@@ -247,6 +255,26 @@ final class PythonRuntime: ObservableObject {
     }
 
     // MARK: - Runtime lifecycle
+
+    /// Extracts `File "x.py", line N` from the last traceback line so the editor
+    /// can mark the exact line that failed.
+    private func parseErrorLocation() -> ErrorLocation? {
+        for line in lines.reversed() where line.kind == .stderr {
+            guard let lineRange = line.text.range(of: "line ") else { continue }
+            let digits = line.text[lineRange.upperBound...].prefix { $0.isNumber }
+            guard !digits.isEmpty, let number = Int(digits) else { continue }
+
+            var file = "main.py"
+            if let firstQuote = line.text.firstIndex(of: "\"") {
+                let afterFirst = line.text.index(after: firstQuote)
+                if let secondQuote = line.text[afterFirst...].firstIndex(of: "\"") {
+                    file = String(line.text[afterFirst..<secondQuote])
+                }
+            }
+            return ErrorLocation(file: file, line: number)
+        }
+        return nil
+    }
 
     private func initializeRuntime() -> Bool {
         guard let home = Bundle.main.path(forResource: "python", ofType: nil) else {

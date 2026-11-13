@@ -11,12 +11,12 @@ struct AIAssistantView: View {
 
     @State private var prompt = ""
     @State private var includeFile = false
-    @State private var action = "شرح"
+    @State private var action = "اسأل"
     @State private var response = ""
     @State private var errorMessage: String?
     @State private var isLoading = false
 
-    private let actions = ["شرح", "تصحيح", "تحسين", "توليد", "اختبارات"]
+    private let actions = ["اسأل", "خطة", "كود", "تصحيح", "مراجعة", "شرح"]
 
     private var isConfigured: Bool {
         KeychainStore.read(account: AICredentials.account) != nil
@@ -250,6 +250,26 @@ struct AIAssistantView: View {
         .neonPanel(accent: CyberTheme.neonCyan, cornerRadius: 12)
     }
 
+    private var systemPrompt: String {
+        let base = "أنت مساعد برمجي خبير داخل تطبيق Pythonst3 لمحرر Python على iOS. أجب بالعربية بوضوح ودقة. لا تدّع تشغيل كود لم تره."
+        switch action {
+        case "اسأل":
+            return base + " أجب عن السؤال فقط دون اقتراح تعديلات على الملفات."
+        case "خطة":
+            return base + " ضع خطة تنفيذ مرقمة ومختصرة قبل أي كود، دون كتابة الملف كاملاً."
+        case "كود":
+            return base + " اكتب الكود كاملاً وقابلاً للتشغيل في كتلة ```python واحدة فقط."
+        case "تصحيح":
+            return base + " شخّص الخطأ، اشرح سببه، ثم أعد الملف مصححاً في كتلة ```python واحدة."
+        case "مراجعة":
+            return base + " راجع الجودة والأمان، ثم أعد النسخة المحسنة في كتلة ```python واحدة."
+        case "شرح":
+            return base + " اشرح الكود بالعربية خطوة بخطوة دون إعادة كتابته."
+        default:
+            return base
+        }
+    }
+
     @MainActor
     private func send() async {
         guard let key = KeychainStore.read(account: AICredentials.account), !key.isEmpty else {
@@ -282,7 +302,7 @@ struct AIAssistantView: View {
         let messages = [
             ChatMessage(
                 role: "system",
-                content: "أنت مساعد برمجي خبير داخل تطبيق Pythonst3 لمحرر Python على iOS. أجب بالعربية بوضوح ودقة. لا تدّع تشغيل كود لم تره. عند اقتراح تعديلات اعرض الكود كاملاً في كتلة كود."
+                content: systemPrompt
             ),
             ChatMessage(role: "user", content: userText)
         ]

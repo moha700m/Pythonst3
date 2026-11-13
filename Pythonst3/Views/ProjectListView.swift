@@ -7,7 +7,6 @@ struct ProjectListView: View {
     @ObservedObject private var runtime = PythonRuntime.shared
     @Environment(\.horizontalSizeClass) private var sizeClass
 
-    @State private var newProjectName = ""
     @State private var showingNewProject = false
     @State private var projectToDelete: Project?
     @State private var showingDelete = false
@@ -90,18 +89,8 @@ struct ProjectListView: View {
         ) { result in
             app.handleExportResult(result)
         }
-        .alert("مشروع جديد", isPresented: $showingNewProject) {
-            TextField("اسم المشروع", text: $newProjectName)
-            Button("إنشاء") {
-                let name = newProjectName
-                newProjectName = ""
-                app.createProject(named: name)
-            }
-            Button("إلغاء", role: .cancel) {
-                newProjectName = ""
-            }
-        } message: {
-            Text("سيُنشأ مشروع محلي داخل مساحة التطبيق، مع ملف main.py جاهز.")
+        .sheet(isPresented: $showingNewProject) {
+            NewProjectSheet()
         }
         .alert("حذف المشروع", isPresented: $showingDelete) {
             Button("حذف", role: .destructive) {

@@ -84,10 +84,10 @@ final class ProjectStore {
         return projects.sorted { $0.updatedAt > $1.updatedAt }
     }
 
-    func createProject(name: String) throws -> Project {
+    func createProject(name: String, template: ProjectTemplate = .starter) throws -> Project {
         var project = try allocateProject(named: name)
         let folder = folderURL(for: project)
-        try ProjectTemplates.starter.write(
+        try template.source.write(
             to: folder.appendingPathComponent("main.py"),
             atomically: true,
             encoding: .utf8
