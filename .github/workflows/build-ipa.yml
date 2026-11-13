@@ -140,6 +140,7 @@ jobs:
         run: ./Scripts/capture_layouts.sh "build-tests/Build/Products/Debug-iphonesimulator/Pythonst3.app" screenshots
 
       - name: Upload layout screenshots
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: iphone-layout-screenshots

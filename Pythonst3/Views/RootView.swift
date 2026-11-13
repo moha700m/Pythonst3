@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct RootView: View {
     @EnvironmentObject private var app: AppModel
@@ -6,6 +7,7 @@ struct RootView: View {
 
     private var showsLayoutProbe: Bool {
         ProcessInfo.processInfo.arguments.contains("--pythonst3-layout-probe")
+            || ProcessInfo.processInfo.environment["PYTHONST3_LAYOUT_PROBE"] == "1"
     }
 
     var body: some View {
@@ -19,7 +21,8 @@ struct RootView: View {
                 ProjectListView()
                     .transition(.opacity)
             }
-
+        }
+        .overlay {
             if showsLayoutProbe {
                 LayoutProbeOverlay()
             }
@@ -42,6 +45,7 @@ struct RootView: View {
         }
         .onAppear {
             PythonRuntime.shared.prepare()
+            writeProbeMarkerIfNeeded()
         }
         .onChange(of: scenePhase) { phase in
             if phase != .active {
@@ -49,37 +53,40 @@ struct RootView: View {
             }
         }
     }
+
+    /// Lets CI prove that probe mode really reached the app, not just the command line.
+    private func writeProbeMarkerIfNeeded() {
+        guard showsLayoutProbe else { return }
+        guard let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return
+        }
+        let screen = UIScreen.main.bounds
+        let marker = "probe=active screen=\(Int(screen.width))x\(Int(screen.height)) scale=\(UIScreen.main.scale)\n"
+        try? marker.write(
+            to: directory.appendingPathComponent("layout_probe.txt"),
+            atomically: true,
+            encoding: .utf8
+        )
+    }
 }
 
-/// Debug-only overlay used by `Scripts/capture_layouts.sh`. It paints 4pt magenta
-/// strips at the true screen edges, so the CI pixel probe can prove the app window
+/// Debug-only overlay used by `Scripts/capture_layouts.sh`. It paints 8pt magenta
+/// strips at the true screen edges so the CI pixel probe can prove the app window
 /// covers the whole display instead of being letterboxed by an old SDK.
 struct LayoutProbeOverlay: View {
-    var body: some View {
-        GeometryReader { proxy in
-            ZStack {
-                VStack(spacing: 0) {
-                    Rectangle()
-                        .fill(Color(red: 1, green: 0, blue: 1))
-                        .frame(height: 4)
-                    Spacer(minLength: 0)
-                    Rectangle()
-                        .fill(Color(red: 1, green: 0, blue: 1))
-                        .frame(height: 4)
-                }
+    private let probe = Color(red: 1, green: 0, blue: 1)
 
-                Text("\(Int(proxy.size.width))×\(Int(proxy.size.height))")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.black)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(Color(red: 1, green: 0, blue: 1))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .padding(.top, 10)
-                    .padding(.leading, 10)
-            }
-            .ignoresSafeArea()
+    var body: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(probe)
+                .frame(height: 8)
+            Spacer(minLength: 0)
+            Rectangle()
+                .fill(probe)
+                .frame(height: 8)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
         .allowsHitTesting(false)
         .accessibilityHidden(true)

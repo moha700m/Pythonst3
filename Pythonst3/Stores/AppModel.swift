@@ -54,10 +54,10 @@ final class AppModel: ObservableObject {
         if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
             return
         }
-        if ProcessInfo.processInfo.arguments.contains("--pythonst3-home") {
+        if isHomeLaunch {
             return
         }
-        if ProcessInfo.processInfo.arguments.contains("--pythonst3-demo") {
+        if isDemoLaunch {
             openDemoProjectIfNeeded()
             return
         }
@@ -81,6 +81,16 @@ final class AppModel: ObservableObject {
         } else {
             open(projects[0])
         }
+    }
+
+    private var isHomeLaunch: Bool {
+        ProcessInfo.processInfo.arguments.contains("--pythonst3-home")
+            || ProcessInfo.processInfo.environment["PYTHONST3_HOME"] == "1"
+    }
+
+    private var isDemoLaunch: Bool {
+        ProcessInfo.processInfo.arguments.contains("--pythonst3-demo")
+            || ProcessInfo.processInfo.environment["PYTHONST3_DEMO"] == "1"
     }
 
     private func openDemoProjectIfNeeded() {

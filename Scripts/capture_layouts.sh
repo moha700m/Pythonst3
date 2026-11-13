@@ -42,20 +42,47 @@ capture() {
 
     xcrun simctl install "$udid" "$APP"
 
-    xcrun simctl launch "$udid" "$BUNDLE_ID" --pythonst3-home >/dev/null
-    sleep 2
+    SIMCTL_CHILD_PYTHONST3_HOME=1 \
+        xcrun simctl launch "$udid" "$BUNDLE_ID" --pythonst3-home >/dev/null
+    sleep 5
     xcrun simctl io "$udid" screenshot "$OUT/$slug-list.png"
 
     xcrun simctl terminate "$udid" "$BUNDLE_ID" >/dev/null 2>&1 || true
-    xcrun simctl launch "$udid" "$BUNDLE_ID" --pythonst3-demo >/dev/null
-    sleep 3
+    SIMCTL_CHILD_PYTHONST3_DEMO=1 \
+        xcrun simctl launch "$udid" "$BUNDLE_ID" --pythonst3-demo >/dev/null
+    sleep 5
     xcrun simctl io "$udid" screenshot "$OUT/$slug-workspace.png"
 
-    # Prove the app window covers the whole display instead of being letterboxed.
+    # The launch screen uses the same near-black color as the app, so a fixed
+    # sleep can capture the launch screen and look like a failed probe. Wait for
+    # the marker that RootView writes once the real UI is on screen.
     xcrun simctl terminate "$udid" "$BUNDLE_ID" >/dev/null 2>&1 || true
-    xcrun simctl launch "$udid" "$BUNDLE_ID" --pythonst3-layout-probe >/dev/null
-    sleep 3
+
+    CONTAINER="$(xcrun simctl get_app_container "$udid" "$BUNDLE_ID" data 2>/dev/null || true)"
+    MARKER=""
+    if [ -n "$CONTAINER" ]; then
+        MARKER="$CONTAINER/Documents/layout_probe.txt"
+        rm -f "$MARKER"
+    fi
+
+    SIMCTL_CHILD_PYTHONST3_LAYOUT_PROBE=1 \
+        xcrun simctl launch "$udid" "$BUNDLE_ID" --pythonst3-layout-probe >/dev/null
+
+    waited=0
+    while [ -n "$MARKER" ] && [ ! -f "$MARKER" ] && [ "$waited" -lt 30 ]; do
+        sleep 1
+        waited=$((waited + 1))
+    done
+    sleep 2
+
     xcrun simctl io "$udid" screenshot "$OUT/$slug-probe.png"
+
+    if [ -n "$MARKER" ] && [ -f "$MARKER" ]; then
+        echo "Probe marker: $(cat "$MARKER") (waited ${waited}s)"
+    else
+        echo "Probe marker: MISSING (probe launch did not reach the app)"
+    fi
+
     swift "$SCRIPT_DIR/pixel_probe.swift" "$OUT/$slug-probe.png" "$expected"
     rm -f "$OUT/$slug-probe.png"
 
