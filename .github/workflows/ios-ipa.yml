@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "Pythonst3/**"
+      - "Pythonst3Tests/**"
       - "Scripts/**"
       - "project.yml"
       - ".github/workflows/ios-ipa.yml"
@@ -98,6 +99,19 @@ jobs:
           echo "Bundle identifier: $BUNDLE_ID"
           echo "Embedded Python: $(cat "$APP/python/lib/python3.13/_sysconfigdata__ios_arm64-iphoneos.py" 2>/dev/null | head -1 || true)"
 
+      - name: Run simulator smoke tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project Pythonst3.xcodeproj \
+            -scheme Pythonst3 \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -derivedDataPath build-tests \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            ONLY_ACTIVE_ARCH=YES | tee test.log
+
       - name: Package unsigned IPA
         run: |
           set -eu
@@ -142,6 +156,7 @@ jobs:
           name: ios-build-log
           path: |
             build.log
+            test.log
             ipa-contents.txt
           retention-days: 7
           if-no-files-found: ignore

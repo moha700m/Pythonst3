@@ -59,6 +59,20 @@ targets:
           "${PROJECT_DIR}/Scripts/embed_python.sh"
         basedOnDependencyAnalysis: false
 
+  Pythonst3Tests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Pythonst3Tests
+    dependencies:
+      - target: Pythonst3
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.moha700m.pythonst3.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Pythonst3.app/Pythonst3"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
 schemes:
   Pythonst3:
     build:
@@ -66,5 +80,9 @@ schemes:
         Pythonst3: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - Pythonst3Tests
     archive:
       config: Release
