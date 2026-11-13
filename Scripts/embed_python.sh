@@ -57,7 +57,9 @@ process_dylibs() {
         mkdir -p "$framework_dir"
         cp "$XCFRAMEWORK/build/iOS-dylib-Info-template.plist" "$framework_dir/Info.plist"
         /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable $module" "$framework_dir/Info.plist"
-        /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.moha700m.pythonst3.$module" "$framework_dir/Info.plist"
+        safe_module="$(printf '%s' "$module" | tr '_' '-')"
+        safe_module="py${safe_module#-}"
+        /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.moha700m.pythonst3.$safe_module" "$framework_dir/Info.plist"
 
         if [ "${EFFECTIVE_PLATFORM_NAME:-}" = "-iphonesimulator" ]; then
             /usr/libexec/PlistBuddy -c "Set :CFBundleSupportedPlatforms:0 iPhoneSimulator" "$framework_dir/Info.plist"

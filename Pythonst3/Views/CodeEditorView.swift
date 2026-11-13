@@ -73,7 +73,7 @@ final class CodeEditorContainerView: UIView {
 
         lineNumbers.backgroundColor = UIColor(CyberTheme.background)
         lineNumbers.isUserInteractionEnabled = false
-        lineNumbers.textInsetTop = 10
+        lineNumbers.textInsetTop = 8
 
         textView.backgroundColor = .clear
         textView.isEditable = true
@@ -87,8 +87,9 @@ final class CodeEditorContainerView: UIView {
         textView.smartQuotesType = .no
         textView.smartDashesType = .no
         textView.smartInsertDeleteType = .no
-        textView.textContainerInset = UIEdgeInsets(top: 10, left: 8, bottom: 24, right: 8)
+        textView.textContainerInset = UIEdgeInsets(top: 8, left: 6, bottom: 18, right: 6)
         textView.textContainer.lineFragmentPadding = 0
+        textView.contentInsetAdjustmentBehavior = .never
         textView.textAlignment = .left
         textView.semanticContentAttribute = .forceLeftToRight
         textView.tintColor = UIColor(CyberTheme.neonGreen)
@@ -153,9 +154,15 @@ final class CodeEditorContainerView: UIView {
         lineNumbers.refresh()
     }
 
+    private var gutterWidth: CGFloat {
+        let lineCount = max(1, (textView.text ?? "").components(separatedBy: "\n").count)
+        let digits = String(lineCount).count
+        return min(52, max(34, 14 + CGFloat(digits) * 8))
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
-        let gutterWidth: CGFloat = 42
+        let gutterWidth = self.gutterWidth
         lineNumbers.frame = CGRect(x: 0, y: 0, width: gutterWidth, height: bounds.height)
         textView.frame = CGRect(
             x: gutterWidth,

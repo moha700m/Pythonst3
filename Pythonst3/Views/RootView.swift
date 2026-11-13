@@ -28,5 +28,8 @@ struct RootView: View {
         .sheet(isPresented: $app.showingAssistant) {
             AIAssistantView()
         }
+        .onAppear {
+            PythonRuntime.shared.prepare()
+        }
     }
 }

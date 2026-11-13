@@ -119,6 +119,7 @@ struct CyberButtonStyle: ButtonStyle {
             .foregroundStyle(filled ? CyberTheme.background : tint)
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
+            .frame(minHeight: 44)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(filled ? tint : tint.opacity(configuration.isPressed ? 0.22 : 0.10))
