@@ -5,6 +5,7 @@ set -eu
 APP="${1:?usage: capture_layouts.sh <path-to-Pythonst3.app> [output-dir]}"
 OUT="${2:-screenshots}"
 BUNDLE_ID="com.moha700m.pythonst3"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 mkdir -p "$OUT"
 
@@ -49,6 +50,14 @@ capture() {
     xcrun simctl launch "$udid" "$BUNDLE_ID" --pythonst3-demo >/dev/null
     sleep 3
     xcrun simctl io "$udid" screenshot "$OUT/$slug-workspace.png"
+
+    # Prove the app window covers the whole display instead of being letterboxed.
+    xcrun simctl terminate "$udid" "$BUNDLE_ID" >/dev/null 2>&1 || true
+    xcrun simctl launch "$udid" "$BUNDLE_ID" --pythonst3-layout-probe >/dev/null
+    sleep 3
+    xcrun simctl io "$udid" screenshot "$OUT/$slug-probe.png"
+    swift "$SCRIPT_DIR/pixel_probe.swift" "$OUT/$slug-probe.png" "$expected"
+    rm -f "$OUT/$slug-probe.png"
 
     xcrun simctl shutdown "$udid" >/dev/null 2>&1 || true
     xcrun simctl delete "$udid" >/dev/null 2>&1 || true

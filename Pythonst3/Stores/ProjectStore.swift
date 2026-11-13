@@ -87,17 +87,7 @@ final class ProjectStore {
     func createProject(name: String) throws -> Project {
         var project = try allocateProject(named: name)
         let folder = folderURL(for: project)
-        let welcome = """
-        # Pythonst3 — مشروع جديد
-        # اكتب كود Python هنا ثم اضغط زر التشغيل.
-
-        def main():
-            print("مرحباً من Pythonst3")
-
-        if __name__ == "__main__":
-            main()
-        """
-        try welcome.write(
+        try ProjectTemplates.starter.write(
             to: folder.appendingPathComponent("main.py"),
             atomically: true,
             encoding: .utf8

@@ -5,6 +5,8 @@ struct CodeEditorView: UIViewRepresentable {
     @Binding var text: String
     var fontSize: CGFloat
     var onCursorChange: (Int, Int) -> Void = { _, _ in }
+    var onRun: () -> Void = {}
+    var onMessage: (String) -> Void = { _ in }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -14,6 +16,8 @@ struct CodeEditorView: UIViewRepresentable {
         let view = CodeEditorContainerView()
         view.textView.delegate = context.coordinator
         view.configure(fontSize: fontSize)
+        view.onRun = onRun
+        view.onMessage = onMessage
         view.setText(text)
         context.coordinator.container = view
         return view
@@ -21,6 +25,8 @@ struct CodeEditorView: UIViewRepresentable {
 
     func updateUIView(_ uiView: CodeEditorContainerView, context: Context) {
         context.coordinator.parent = self
+        uiView.onRun = onRun
+        uiView.onMessage = onMessage
         uiView.configure(fontSize: fontSize)
         if uiView.textView.text != text {
             uiView.setText(text)
@@ -38,7 +44,7 @@ struct CodeEditorView: UIViewRepresentable {
 
         func textViewDidChange(_ textView: UITextView) {
             parent.text = textView.text ?? ""
-            container?.lineNumbers.refresh()
+            container?.refreshChrome()
             scheduleHighlight()
         }
 
@@ -65,7 +71,14 @@ struct CodeEditorView: UIViewRepresentable {
 final class CodeEditorContainerView: UIView {
     let textView = UITextView()
     let lineNumbers = LineNumberGutterView()
+    private let placeholderLabel = UILabel()
+    private let accessoryBar = EditorAccessoryBar(
+        frame: CGRect(x: 0, y: 0, width: 320, height: 44)
+    )
     private var font = UIFont.monospacedSystemFont(ofSize: 14, weight: .regular)
+
+    var onRun: (() -> Void)?
+    var onMessage: ((String) -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -101,9 +114,31 @@ final class CodeEditorContainerView: UIView {
         ]
         textView.accessibilityLabel = "محرر الكود"
 
+        accessoryBar.onPaste = { [weak self] in self?.pasteFromClipboard() }
+        accessoryBar.onTab = { [weak self] in self?.insertTab() }
+        accessoryBar.onUndo = { [weak self] in self?.textView.undoManager?.undo() }
+        accessoryBar.onRedo = { [weak self] in self?.textView.undoManager?.redo() }
+        accessoryBar.onDismiss = { [weak self] in self?.textView.resignFirstResponder() }
+        accessoryBar.onRun = { [weak self] in
+            self?.textView.resignFirstResponder()
+            self?.onRun?()
+        }
+        textView.inputAccessoryView = accessoryBar
+
+        placeholderLabel.text = "اكتب أو الصق كود Python هنا"
+        placeholderLabel.font = UIFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+        placeholderLabel.textColor = UIColor(CyberTheme.textMuted)
+        placeholderLabel.numberOfLines = 0
+        placeholderLabel.semanticContentAttribute = .forceRightToLeft
+        placeholderLabel.textAlignment = .right
+        placeholderLabel.isUserInteractionEnabled = false
+        placeholderLabel.isAccessibilityElement = false
+
         addSubview(lineNumbers)
         addSubview(textView)
+        addSubview(placeholderLabel)
         lineNumbers.attach(to: textView)
+        refreshChrome()
     }
 
     required init?(coder: NSCoder) {
@@ -128,6 +163,11 @@ final class CodeEditorContainerView: UIView {
     func setText(_ text: String) {
         textView.text = text
         applyHighlight()
+        refreshChrome()
+    }
+
+    func refreshChrome() {
+        placeholderLabel.isHidden = !(textView.text ?? "").isEmpty
         lineNumbers.refresh()
     }
 
@@ -151,8 +191,34 @@ final class CodeEditorContainerView: UIView {
             .font: font,
             .foregroundColor: UIColor(CyberTheme.textPrimary)
         ]
-        lineNumbers.refresh()
+        refreshChrome()
     }
+
+    // MARK: - Actions
+
+    @objc private func pasteFromClipboard() {
+        guard let clipboard = UIPasteboard.general.string,
+              !clipboard.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            onMessage?("الحافظة فارغة — انسخ كود Python أولاً.")
+            return
+        }
+        if !textView.isFirstResponder {
+            textView.becomeFirstResponder()
+        }
+        let target = textView.selectedTextRange
+            ?? textView.textRange(from: textView.endOfDocument, to: textView.endOfDocument)
+        guard let target else { return }
+        textView.replace(target, withText: clipboard)
+        textView.delegate?.textViewDidChange?(textView)
+    }
+
+    @objc private func insertTab() {
+        guard textView.isEditable else { return }
+        textView.insertText("    ")
+        textView.delegate?.textViewDidChange?(textView)
+    }
+
+    // MARK: - Layout
 
     private var gutterWidth: CGFloat {
         let lineCount = max(1, (textView.text ?? "").components(separatedBy: "\n").count)
@@ -170,7 +236,90 @@ final class CodeEditorContainerView: UIView {
             width: max(0, bounds.width - gutterWidth),
             height: bounds.height
         )
+        let placeholderWidth = max(0, bounds.width - gutterWidth - 20)
+        placeholderLabel.frame = CGRect(
+            x: gutterWidth + 8,
+            y: 10,
+            width: placeholderWidth,
+            height: 44
+        )
     }
+}
+
+/// Keyboard accessory that makes the two core actions impossible to miss:
+/// paste the clipboard, then run. The rest are conveniences.
+final class EditorAccessoryBar: UIToolbar {
+    var onPaste: (() -> Void)?
+    var onRun: (() -> Void)?
+    var onTab: (() -> Void)?
+    var onUndo: (() -> Void)?
+    var onRedo: (() -> Void)?
+    var onDismiss: (() -> Void)?
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        configure()
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    private func configure() {
+        let appearance = UIToolbarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor(CyberTheme.surface)
+        standardAppearance = appearance
+        compactAppearance = appearance
+        tintColor = UIColor(CyberTheme.neonGreen)
+        semanticContentAttribute = .forceRightToLeft
+        autoresizingMask = .flexibleWidth
+
+        let paste = item(title: "لصق", action: #selector(pasteTapped))
+        paste.setTitleTextAttributes(
+            [.font: UIFont.systemFont(ofSize: 13, weight: .semibold)],
+            for: .normal
+        )
+        let tab = item(title: "Tab", action: #selector(tabTapped))
+        let undo = item(image: "arrow.uturn.backward", action: #selector(undoTapped))
+        let redo = item(image: "arrow.uturn.forward", action: #selector(redoTapped))
+        let run = item(title: "▶ تشغيل", action: #selector(runTapped))
+        run.style = .done
+        run.setTitleTextAttributes(
+            [.font: UIFont.systemFont(ofSize: 13, weight: .bold)],
+            for: .normal
+        )
+        let hide = item(image: "keyboard.chevron.compact.down", action: #selector(dismissTapped))
+        let spacer = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+
+        items = [paste, tab, undo, redo, spacer, run, hide]
+        sizeToFit()
+    }
+
+    private func item(title: String, action: Selector) -> UIBarButtonItem {
+        let item = UIBarButtonItem(title: title, style: .plain, target: self, action: action)
+        item.setTitleTextAttributes(
+            [.font: UIFont.systemFont(ofSize: 13, weight: .medium)],
+            for: .normal
+        )
+        return item
+    }
+
+    private func item(image: String, action: Selector) -> UIBarButtonItem {
+        UIBarButtonItem(
+            image: UIImage(systemName: image),
+            style: .plain,
+            target: self,
+            action: action
+        )
+    }
+
+    @objc private func pasteTapped() { onPaste?() }
+    @objc private func tabTapped() { onTab?() }
+    @objc private func undoTapped() { onUndo?() }
+    @objc private func redoTapped() { onRedo?() }
+    @objc private func runTapped() { onRun?() }
+    @objc private func dismissTapped() { onDismiss?() }
 }
 
 final class LineNumberGutterView: UIView {

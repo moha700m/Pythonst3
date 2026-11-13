@@ -7,6 +7,7 @@ struct WorkspaceView: View {
     @ObservedObject private var runtime = PythonRuntime.shared
 
     @AppStorage("editor.fontSize") private var editorFontSize: Double = 14
+    @AppStorage("editor.coachDismissed") private var coachDismissed = false
 
     @State private var consoleExpanded = false
     @State private var showFiles = false
@@ -19,6 +20,9 @@ struct WorkspaceView: View {
         GeometryReader { proxy in
             VStack(spacing: 0) {
                 topBar
+                if !coachDismissed && app.activeFile != nil {
+                    coachStrip
+                }
                 fileTabs
                 editorArea
                 statusBar
@@ -28,29 +32,7 @@ struct WorkspaceView: View {
                     height: consoleHeight(for: proxy.size.height)
                 )
             }
-            .frame(width: proxy.size.width, height: proxy.size.height)
-            .background(CyberTheme.background.ignoresSafeArea())
-            .onChange(of: runtime.state) { newState in
-                if newState == .running {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        consoleExpanded = true
-                    }
-                }
-            }
-            .onChange(of: runtime.pendingInput?.id) { _ in
-                if runtime.pendingInput != nil {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        consoleExpanded = true
-                    }
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-                if runtime.pendingInput == nil {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        consoleExpanded = false
-                    }
-                }
-            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .background(CyberTheme.background.ignoresSafeArea())
         .onAppear {
@@ -58,6 +40,27 @@ struct WorkspaceView: View {
         }
         .onDisappear {
             app.saveActiveNow()
+        }
+        .onChange(of: runtime.state) { newState in
+            if newState == .running {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    consoleExpanded = true
+                }
+            }
+        }
+        .onChange(of: runtime.pendingInput?.id) { _ in
+            if runtime.pendingInput != nil {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    consoleExpanded = true
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            if runtime.pendingInput == nil {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    consoleExpanded = false
+                }
+            }
         }
         .sheet(isPresented: $showFiles) {
             FileListView()
@@ -78,19 +81,19 @@ struct WorkspaceView: View {
     }
 
     private func consoleHeight(for availableHeight: CGFloat) -> CGFloat {
-        guard consoleExpanded else { return 60 }
-        return min(max(availableHeight * 0.34, 200), availableHeight * 0.52)
+        guard consoleExpanded else { return 56 }
+        return min(max(availableHeight * 0.32, 180), availableHeight * 0.50)
     }
 
     private var topBar: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             Button {
                 app.closeProject()
             } label: {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(CyberTheme.textSecondary)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 40, height: 40)
                     .background(Circle().fill(CyberTheme.surface.opacity(0.9)))
             }
             .buttonStyle(.plain)
@@ -98,10 +101,10 @@ struct WorkspaceView: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(app.selectedProject?.name ?? "Pythonst3")
-                    .font(CyberTheme.arabic(15, weight: .semibold))
+                    .font(CyberTheme.arabic(14, weight: .semibold))
                     .foregroundStyle(CyberTheme.textPrimary)
                     .lineLimit(1)
-                Text(app.activeFile?.path ?? "—")
+                Text(app.activeFile?.path ?? "لا يوجد ملف")
                     .font(CyberTheme.mono(9))
                     .foregroundStyle(CyberTheme.textSecondary)
                     .lineLimit(1)
@@ -118,26 +121,31 @@ struct WorkspaceView: View {
                     app.runActive()
                 }
             } label: {
-                Image(systemName: runtime.state == .running ? "stop.fill" : "play.fill")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(runtime.state == .running ? CyberTheme.danger : CyberTheme.neonGreen)
-                    .frame(width: 44, height: 44)
-                    .background(
-                        Circle().fill(
-                            (runtime.state == .running ? CyberTheme.danger : CyberTheme.neonGreen).opacity(0.12)
-                        )
+                HStack(spacing: 5) {
+                    Image(systemName: runtime.state == .running ? "stop.fill" : "play.fill")
+                        .font(.system(size: 11, weight: .bold))
+                    Text(runtime.state == .running ? "إيقاف" : "تشغيل")
+                        .font(CyberTheme.arabic(12, weight: .bold))
+                }
+                .foregroundStyle(runtime.state == .running ? CyberTheme.danger : CyberTheme.neonGreen)
+                .padding(.horizontal, 11)
+                .frame(height: 34)
+                .background(
+                    Capsule().fill(
+                        (runtime.state == .running ? CyberTheme.danger : CyberTheme.neonGreen).opacity(0.14)
                     )
-                    .overlay(
-                        Circle().stroke(
-                            (runtime.state == .running ? CyberTheme.danger : CyberTheme.neonGreen).opacity(0.45),
-                            lineWidth: 1
-                        )
+                )
+                .overlay(
+                    Capsule().stroke(
+                        (runtime.state == .running ? CyberTheme.danger : CyberTheme.neonGreen).opacity(0.5),
+                        lineWidth: 1
                     )
+                )
             }
             .buttonStyle(.plain)
             .disabled(app.activeFile == nil || runtime.state == .preparing)
             .opacity(app.activeFile == nil || runtime.state == .preparing ? 0.4 : 1)
-            .accessibilityLabel(runtime.state == .running ? "إيقاف" : "تشغيل")
+            .accessibilityLabel(runtime.state == .running ? "إيقاف التنفيذ" : "تشغيل الكود")
 
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -147,7 +155,7 @@ struct WorkspaceView: View {
                 Image(systemName: consoleExpanded ? "rectangle.compress.vertical" : "terminal")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(consoleExpanded ? CyberTheme.neonCyan : CyberTheme.textSecondary)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 40, height: 40)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(consoleExpanded ? "تصغير وحدة التحكم" : "توسيع وحدة التحكم")
@@ -162,6 +170,11 @@ struct WorkspaceView: View {
                     showNewFile = true
                 } label: {
                     Label("ملف جديد", systemImage: "doc.badge.plus")
+                }
+                Button {
+                    _ = app.pasteClipboardIntoActiveFile()
+                } label: {
+                    Label("لصق من الحافظة", systemImage: "doc.on.clipboard")
                 }
                 Button {
                     app.saveActiveNow()
@@ -183,11 +196,11 @@ struct WorkspaceView: View {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 17))
                     .foregroundStyle(CyberTheme.textSecondary)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 40, height: 40)
             }
             .accessibilityLabel("المزيد")
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(
             CyberTheme.surface
@@ -198,6 +211,63 @@ struct WorkspaceView: View {
                         .frame(height: 0.5)
                 }
         )
+    }
+
+    /// Shown only until the first run. It answers the two questions a new user has:
+    /// where does the code go, and how do I get code from the clipboard in.
+    private var coachStrip: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "hand.point.up.left.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(CyberTheme.amber)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("الكود يُكتب في المساحة السوداء بالأسفل")
+                    .font(CyberTheme.arabic(11.5, weight: .semibold))
+                    .foregroundStyle(CyberTheme.textPrimary)
+                    .lineLimit(1)
+                Text("الصق أي كود ثم اضغط «تشغيل» في الأعلى")
+                    .font(CyberTheme.arabic(9.5))
+                    .foregroundStyle(CyberTheme.textSecondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 4)
+
+            Button {
+                _ = app.pasteClipboardIntoActiveFile()
+            } label: {
+                Text("لصق")
+                    .font(CyberTheme.arabic(11, weight: .bold))
+                    .foregroundStyle(CyberTheme.amber)
+                    .padding(.horizontal, 12)
+                    .frame(height: 30)
+                    .background(Capsule().fill(CyberTheme.amber.opacity(0.14)))
+                    .overlay(Capsule().stroke(CyberTheme.amber.opacity(0.4), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("لصق الكود من الحافظة")
+
+            Button {
+                coachDismissed = true
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(CyberTheme.textMuted)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("إخفاء التلميح")
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(CyberTheme.amber.opacity(0.06))
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(CyberTheme.amber.opacity(0.18))
+                .frame(height: 0.5)
+        }
     }
 
     private var fileTabs: some View {
@@ -275,26 +345,44 @@ struct WorkspaceView: View {
                     onCursorChange: { line, column in
                         cursorLine = line
                         cursorColumn = column
-                    }
+                    },
+                    onRun: { app.runActive() },
+                    onMessage: { message in app.showMessage(message) }
                 )
             } else {
-                VStack(spacing: 10) {
-                    Image(systemName: "doc.text.magnifyingglass")
-                        .font(.system(size: 30, weight: .light))
-                        .foregroundStyle(CyberTheme.neonGreen.opacity(0.75))
-                    Text("لا يوجد ملف مفتوح")
-                        .font(CyberTheme.arabic(15, weight: .semibold))
-                        .foregroundStyle(CyberTheme.textPrimary)
-                    Button("إنشاء ملف") {
-                        showNewFile = true
-                    }
-                    .buttonStyle(CyberButtonStyle(filled: true))
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                emptyEditor
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(CyberTheme.background)
+    }
+
+    private var emptyEditor: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "chevron.left.forwardslash.chevron.right")
+                .font(.system(size: 28, weight: .light))
+                .foregroundStyle(CyberTheme.neonGreen.opacity(0.85))
+            Text("لا يوجد ملف مفتوح")
+                .font(CyberTheme.arabic(15, weight: .semibold))
+                .foregroundStyle(CyberTheme.textPrimary)
+            Text("أنشئ ملفاً أو ألصق كوداً جاهزاً من الحافظة.")
+                .font(CyberTheme.arabic(12))
+                .foregroundStyle(CyberTheme.textSecondary)
+                .multilineTextAlignment(.center)
+            HStack(spacing: 8) {
+                Button("ملف جديد") {
+                    showNewFile = true
+                }
+                .buttonStyle(CyberButtonStyle(filled: true))
+
+                Button("لصق كود") {
+                    app.createFileFromClipboard()
+                }
+                .buttonStyle(CyberButtonStyle(tint: CyberTheme.neonCyan))
+            }
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var statusBar: some View {

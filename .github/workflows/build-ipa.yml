@@ -99,6 +99,30 @@ jobs:
           echo "Bundle identifier: $BUNDLE_ID"
           echo "Embedded Python: $(cat "$APP/python/lib/python3.13/_sysconfigdata__ios_arm64-iphoneos.py" 2>/dev/null | head -1 || true)"
 
+      - name: Validate full-screen build metadata
+        run: |
+          set -eu
+          APP="build/Build/Products/Release-iphoneos/Pythonst3.app"
+          INFO="$APP/Info.plist"
+          MINOS=$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$INFO")
+          SDK=$(otool -l "$APP/Pythonst3" | awk '/cmd LC_BUILD_VERSION/{found=1; next} found && $1 == "sdk" {print $2; exit}')
+          echo "MinimumOSVersion: $MINOS"
+          echo "Build SDK: $SDK"
+          test -n "$SDK"
+          /usr/libexec/PlistBuddy -c 'Print :UILaunchScreen' "$INFO" >/dev/null
+          echo "OK: UILaunchScreen is declared"
+          python3 - "$SDK" <<'PY'
+          import sys
+          raw = sys.argv[1]
+          major = int(raw.split(".")[0])
+          if major < 26:
+              raise SystemExit(
+                  "FAIL: built with iOS SDK %s. Apps built with an SDK older than the "
+                  "device OS are letterboxed on iOS 26. Build with Xcode 26 or newer." % raw
+              )
+          print("OK: build SDK %s renders full-screen on iOS 26" % raw)
+          PY
+
       - name: Run simulator smoke tests
         run: |
           set -o pipefail

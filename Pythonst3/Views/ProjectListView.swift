@@ -34,6 +34,7 @@ struct ProjectListView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 18) {
                     hero
+                    codeEntryCard
                     statusLine
 
                     HStack(alignment: .firstTextBaseline) {
@@ -187,6 +188,54 @@ struct ProjectListView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// The single most important control in the app: one tap and the caret is in a
+    /// Python file. Pasting a whole program is the other one-tap path.
+    private var codeEntryCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(CyberTheme.neonCyan.opacity(0.12))
+                        .frame(width: 42, height: 42)
+                    Image(systemName: "chevron.left.forwardslash.chevron.right")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(CyberTheme.neonCyan)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("محرر الكود")
+                        .font(CyberTheme.arabic(15, weight: .bold))
+                        .foregroundStyle(CyberTheme.textPrimary)
+                    Text("هنا تكتب أو تلصق كود Python مباشرة على الجهاز.")
+                        .font(CyberTheme.arabic(11))
+                        .foregroundStyle(CyberTheme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    app.startCoding()
+                } label: {
+                    Label("افتح المحرر", systemImage: "play.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(CyberButtonStyle(filled: true))
+
+                Button {
+                    app.startProjectFromClipboard()
+                } label: {
+                    Label("لصق كود", systemImage: "doc.on.clipboard")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(CyberButtonStyle(tint: CyberTheme.neonCyan))
+            }
+        }
+        .padding(13)
+        .neonPanel(accent: CyberTheme.neonCyan, cornerRadius: 16)
+    }
+
     private var statusLine: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
@@ -228,6 +277,15 @@ struct ProjectListView: View {
                 .font(CyberTheme.arabic(13))
                 .foregroundStyle(CyberTheme.textSecondary)
                 .multilineTextAlignment(.center)
+
+            Button {
+                app.startCoding()
+            } label: {
+                Label("ابدأ الكتابة الآن", systemImage: "play.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(CyberButtonStyle(filled: true))
+            .padding(.top, 2)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 18)
