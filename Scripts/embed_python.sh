@@ -23,7 +23,11 @@ case "${EFFECTIVE_PLATFORM_NAME:-}" in
         ;;
 esac
 
-ARCH="${CURRENT_ARCH:-arm64}"
+ARCH="${ARCHS%% *}"
+case "$ARCH" in
+    arm64|x86_64) ;;
+    *) ARCH="arm64" ;;
+esac
 
 echo "Embedding CPython stdlib for ${EFFECTIVE_PLATFORM_NAME:-device}/${ARCH}"
 

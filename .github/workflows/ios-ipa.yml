@@ -69,12 +69,15 @@ jobs:
           test -f "$APP/Info.plist"
           test -f "$APP/Frameworks/Python.framework/Python"
           test -f "$APP/python/lib/python3.13/os.py"
+          test -d "$APP/python/lib/python3.13/lib-dynload"
           test -f "$APP/python/lib/python3.13/lib-dynload/_heapq.fwork"
 
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
           test "$BUNDLE_ID" = "com.moha700m.pythonst3"
           EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")
           test "$EXECUTABLE" = "Pythonst3"
+          echo "Extension frameworks: $(find "$APP/Frameworks" -maxdepth 1 -name '*.framework' | wc -l | tr -d ' ')"
+          ls "$APP/python/lib/python3.13/lib-dynload" | head -5
           file "$APP/Pythonst3"
           echo "Bundle identifier: $BUNDLE_ID"
           echo "Embedded Python: $(cat "$APP/python/lib/python3.13/_sysconfigdata__ios_arm64-iphoneos.py" 2>/dev/null | head -1 || true)"
