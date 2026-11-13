@@ -1,0 +1,70 @@
+name: Pythonst3
+
+options:
+  bundleIdPrefix: com.moha700m
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+  generateEmptyDirectories: false
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER: NO
+    ALWAYS_SEARCH_USER_PATHS: NO
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: ""
+
+targets:
+  Pythonst3:
+    type: application
+    platform: iOS
+    sources:
+      - path: Pythonst3
+        excludes:
+          - "Resources/Info.plist"
+    dependencies:
+      - framework: Frameworks/Python.xcframework
+        embed: true
+        codeSign: false
+    settings:
+      base:
+        PRODUCT_NAME: Pythonst3
+        PRODUCT_BUNDLE_IDENTIFIER: com.moha700m.pythonst3
+        INFOPLIST_FILE: Pythonst3/Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_OBJC_BRIDGING_HEADER: Pythonst3/Python/Pythonst3-Bridging-Header.h
+        HEADER_SEARCH_PATHS:
+          - "$(inherited)"
+          - "$(BUILT_PRODUCTS_DIR)/Python.framework/Headers"
+        FRAMEWORK_SEARCH_PATHS:
+          - "$(inherited)"
+          - "$(BUILT_PRODUCTS_DIR)"
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/Frameworks"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CLANG_ENABLE_MODULES: YES
+    postBuildScripts:
+      - name: Embed Python Standard Library
+        script: |
+          set -eu
+          "${PROJECT_DIR}/Scripts/embed_python.sh"
+        basedOnDependencyAnalysis: false
+
+schemes:
+  Pythonst3:
+    build:
+      targets:
+        Pythonst3: all
+    run:
+      config: Debug
+    archive:
+      config: Release

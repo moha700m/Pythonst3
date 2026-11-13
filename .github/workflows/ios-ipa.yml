@@ -1,0 +1,128 @@
+name: iOS Unsigned IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "Pythonst3/**"
+      - "Scripts/**"
+      - "project.yml"
+      - ".github/workflows/ios-ipa.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ipa:
+    name: Build unsigned IPA
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcode-select -p
+          swift --version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Fetch embedded CPython
+        run: ./Scripts/fetch_python.sh
+
+      - name: Generate Xcode project
+        run: xcodegen generate --spec project.yml
+
+      - name: Build application
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Pythonst3.xcodeproj \
+            -scheme Pythonst3 \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            DEVELOPMENT_TEAM="" \
+            ONLY_ACTIVE_ARCH=NO \
+            build | tee build.log
+
+      - name: Validate application bundle
+        run: |
+          set -eu
+          APP="build/Build/Products/Release-iphoneos/Pythonst3.app"
+          test -d "$APP"
+          test -x "$APP/Pythonst3"
+          test -f "$APP/Info.plist"
+          test -f "$APP/Frameworks/Python.framework/Python"
+          test -f "$APP/python/lib/python3.13/os.py"
+          test -f "$APP/python/lib/python3.13/lib-dynload/_heapq.fwork"
+
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
+          test "$BUNDLE_ID" = "com.moha700m.pythonst3"
+          EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")
+          test "$EXECUTABLE" = "Pythonst3"
+          file "$APP/Pythonst3"
+          echo "Bundle identifier: $BUNDLE_ID"
+          echo "Embedded Python: $(cat "$APP/python/lib/python3.13/_sysconfigdata__ios_arm64-iphoneos.py" 2>/dev/null | head -1 || true)"
+
+      - name: Package unsigned IPA
+        run: |
+          set -eu
+          APP="build/Build/Products/Release-iphoneos/Pythonst3.app"
+          rm -rf Payload Pythonst3-unsigned.ipa
+          mkdir -p Payload
+          cp -R "$APP" Payload/Pythonst3.app
+          zip -qry Pythonst3-unsigned.ipa Payload
+          shasum -a 256 Pythonst3-unsigned.ipa > Pythonst3-unsigned.ipa.sha256
+
+      - name: Validate IPA structure
+        run: |
+          set -eu
+          unzip -l Pythonst3-unsigned.ipa | tee ipa-contents.txt
+          grep -q 'Payload/Pythonst3.app/Pythonst3' ipa-contents.txt
+          grep -q 'Payload/Pythonst3.app/Info.plist' ipa-contents.txt
+          grep -q 'Payload/Pythonst3.app/Frameworks/Python.framework/Python' ipa-contents.txt
+          grep -q 'Payload/Pythonst3.app/python/lib/python3.13/os.py' ipa-contents.txt
+
+          rm -rf /tmp/ipa-check
+          mkdir -p /tmp/ipa-check
+          unzip -q Pythonst3-unsigned.ipa -d /tmp/ipa-check
+          IPA_BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' /tmp/ipa-check/Payload/Pythonst3.app/Info.plist)
+          test "$IPA_BUNDLE_ID" = "com.moha700m.pythonst3"
+          echo "IPA bundle identifier: $IPA_BUNDLE_ID"
+          echo "IPA size: $(du -h Pythonst3-unsigned.ipa | cut -f1)"
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pythonst3-unsigned-IPA
+          path: |
+            Pythonst3-unsigned.ipa
+            Pythonst3-unsigned.ipa.sha256
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: |
+            build.log
+            ipa-contents.txt
+          retention-days: 7
+          if-no-files-found: ignore

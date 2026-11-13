@@ -1,0 +1,16 @@
+# Build products
+build/
+DerivedData/
+*.xcuserstate
+*.xcscmblueprint
+xcuserdata/
+
+# Generated Xcode project (regenerate with: xcodegen generate)
+Pythonst3.xcodeproj/
+
+# Downloaded Apple-platform Python support package
+Frameworks/Python.xcframework/
+Frameworks/Python-VERSIONS.txt
+
+# macOS
+.DS_Store
