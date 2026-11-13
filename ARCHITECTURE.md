@@ -142,3 +142,28 @@ Do not execute untrusted Python directly in the web server process. A container 
 - iOS interface should feel native; web interface should adapt to desktop and mobile.
 - Code remains LTR while surrounding UI follows locale direction.
 - Respect Dynamic Type, VoiceOver, reduced motion, safe areas and keyboard resizing.
+
+## 9. AI proposal pipeline (implemented)
+
+The shipped flow is deliberately narrow and auditable:
+
+1. `AIAssistantView` sends the prompt (optionally with the active file) to an OpenAI-compatible endpoint through `AIClient`.
+2. `CodeExtraction` pulls fenced blocks out of the reply and prefers a `python` block.
+3. The user taps «مراجعة الفرق وتطبيقه». `AppModel.proposeAssistantCode` stages a `CodeProposal` containing the previous and proposed content. Nothing is written yet.
+4. `DiffApprovalView` renders a line-based LCS diff (`LineDiff`) with inserted/removed counts.
+5. Only «تطبيق» mutates `files[]` and writes to disk; the previous content is kept in `AgentUndo` for a one-step rollback exposed in the editor menu.
+
+There is no auto-apply mode and no background agent that writes files. Any future multi-agent design must reuse this gate: proposal → visible diff → explicit approval → undo.
+
+## 10. Embedded REPL
+
+`pythonst3_repl` in the C bridge compiles one entry with `Py_single_input` and evaluates it against a persistent `__main__` globals dict (`g_repl_globals`), so names survive between entries and expression values go through `sys.displayhook` into the bridged stdout. The same stop/timeout trace hook applies. Multi-line blocks remain a file-editor concern; the console is for one-liners and inspection.
+
+## 11. Layout verification
+
+Two independent checks guard against the "black bars" class of bugs:
+
+- `Validate full-screen build metadata` fails the build when `LC_BUILD_VERSION.sdk` is older than 26, the usual cause of iOS 26 letterboxing.
+- `--pythonst3-layout-probe` paints 4pt magenta strips at the true screen edges; `Scripts/pixel_probe.swift` samples those pixels on iPhone 17 Pro, 17 Pro Max, 16 and SE. A letterboxed window leaves those samples black and fails the job.
+
+Screenshots for all four sizes are uploaded as the `iphone-layout-screenshots` artifact.

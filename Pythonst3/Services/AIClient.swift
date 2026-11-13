@@ -10,6 +10,7 @@ struct ChatMessage: Codable {
 }
 
 enum AIProviderKind: String, CaseIterable, Identifiable {
+    case openRouter = "openrouter"
     case openAI = "openai"
     case anthropic = "anthropic"
 
@@ -17,6 +18,7 @@ enum AIProviderKind: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        case .openRouter: return "OpenRouter"
         case .openAI: return "OpenAI متوافق"
         case .anthropic: return "Anthropic"
         }
@@ -24,6 +26,7 @@ enum AIProviderKind: String, CaseIterable, Identifiable {
 
     var defaultBaseURL: String {
         switch self {
+        case .openRouter: return "https://openrouter.ai/api/v1"
         case .openAI: return "https://api.openai.com/v1"
         case .anthropic: return "https://api.anthropic.com/v1"
         }
@@ -31,6 +34,7 @@ enum AIProviderKind: String, CaseIterable, Identifiable {
 
     var defaultModel: String {
         switch self {
+        case .openRouter: return "openai/gpt-4o-mini"
         case .openAI: return "gpt-4o-mini"
         case .anthropic: return "claude-3-5-sonnet-latest"
         }
@@ -77,7 +81,7 @@ final class AIClient {
     func complete(messages: [ChatMessage], configuration: AIConfiguration) async throws -> String {
         guard configuration.isConfigured else { throw AIClientError.notConfigured }
         switch configuration.provider {
-        case .openAI:
+        case .openRouter, .openAI:
             return try await openAI(messages: messages, configuration: configuration)
         case .anthropic:
             return try await anthropic(messages: messages, configuration: configuration)
@@ -94,6 +98,10 @@ final class AIClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(configuration.apiKey)", forHTTPHeaderField: "Authorization")
+        if configuration.provider == .openRouter {
+            request.setValue("https://github.com/moha700m/Pythonst3", forHTTPHeaderField: "HTTP-Referer")
+            request.setValue("Pythonst3", forHTTPHeaderField: "X-Title")
+        }
 
         let body: [String: Any] = [
             "model": configuration.model,

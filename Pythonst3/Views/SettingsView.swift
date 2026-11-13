@@ -7,9 +7,9 @@ struct SettingsView: View {
     @AppStorage("console.fontSize") private var consoleFontSize = 12.0
     @AppStorage("runtime.timeout") private var timeout = 30
 
-    @AppStorage("ai.provider") private var provider = "openai"
-    @AppStorage("ai.baseURL") private var baseURL = "https://api.openai.com/v1"
-    @AppStorage("ai.model") private var model = "gpt-4o-mini"
+    @AppStorage("ai.provider") private var provider = "openrouter"
+    @AppStorage("ai.baseURL") private var baseURL = "https://openrouter.ai/api/v1"
+    @AppStorage("ai.model") private var model = "openai/gpt-4o-mini"
 
     @State private var apiKey = ""
     @State private var keyConfigured = false
@@ -49,6 +49,7 @@ struct SettingsView: View {
 
                 Section("المساعد الذكي") {
                     Picker("المزود", selection: $provider) {
+                        Text("OpenRouter").tag("openrouter")
                         Text("OpenAI متوافق").tag("openai")
                         Text("Anthropic").tag("anthropic")
                     }

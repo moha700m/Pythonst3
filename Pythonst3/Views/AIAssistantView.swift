@@ -5,9 +5,9 @@ struct AIAssistantView: View {
     @EnvironmentObject private var app: AppModel
     @Environment(\.dismiss) private var dismiss
 
-    @AppStorage("ai.provider") private var provider = "openai"
-    @AppStorage("ai.baseURL") private var baseURL = "https://api.openai.com/v1"
-    @AppStorage("ai.model") private var model = "gpt-4o-mini"
+    @AppStorage("ai.provider") private var provider = "openrouter"
+    @AppStorage("ai.baseURL") private var baseURL = "https://openrouter.ai/api/v1"
+    @AppStorage("ai.model") private var model = "openai/gpt-4o-mini"
 
     @State private var prompt = ""
     @State private var includeFile = false
