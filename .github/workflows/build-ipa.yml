@@ -9,7 +9,7 @@ on:
       - "Pythonst3Tests/**"
       - "Scripts/**"
       - "project.yml"
-      - ".github/workflows/ios-ipa.yml"
+      - ".github/workflows/build-ipa.yml"
 
 permissions:
   contents: read
