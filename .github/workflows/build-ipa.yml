@@ -3,7 +3,7 @@ name: iOS Unsigned IPA
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, pythonista-ai-v2]
     paths:
       - "Pythonst3/**"
       - "Pythonst3Tests/**"
