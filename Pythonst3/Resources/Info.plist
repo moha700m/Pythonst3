@@ -47,6 +47,26 @@
         <string>UIInterfaceOrientationLandscapeLeft</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
+    <key>UTExportedTypeDeclarations</key>
+    <array>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.moha700m.pythonst3</string>
+            <key>UTTypeDescription</key>
+            <string>Pythonst3 Project</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.json</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>pythonst3</string>
+                </array>
+            </dict>
+        </dict>
+    </array>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
 </dict>
