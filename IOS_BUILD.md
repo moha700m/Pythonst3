@@ -2,6 +2,19 @@
 
 This document covers the native iOS application and the GitHub Actions pipeline that produces an **unsigned** IPA for the owner to sign with ESign.
 
+## Verified build
+
+| Item | Value |
+|---|---|
+| Build commit | `63b9289be41922b40ce46a4098c8458c6793e92e` |
+| GitHub Actions run | https://github.com/moha700m/Pythonst3/actions/runs/43499206551 |
+| Artifact | `Pythonst3-unsigned-IPA` |
+| IPA size | 19,555,549 bytes |
+| IPA SHA-256 | `3de9eac4f24b2d6e4b79811564b7fa3624e9bbed70fb1febee6d9f4b10c921ec` |
+| Simulator test | `PythonRuntimeTests.testEmbeddedPythonExecutesAndCapturesOutput` — passed (1 test, 0 failures) |
+
+The simulator smoke test initializes the embedded interpreter, executes `print('PYTHONST3_SMOKE_OK')`, and asserts that the output was captured by the Swift console bridge. It runs in the same GitHub Actions job before the IPA is packaged.
+
 ## What is built
 
 - Native SwiftUI application, bundle identifier `com.moha700m.pythonst3`.

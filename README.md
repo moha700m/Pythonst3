@@ -45,7 +45,8 @@ Pythonst3 ليس مجرد محرر داخل المتصفح. المنتج يتك�
 - مفسّر CPython 3.13.18 مدمج عبر Python-Apple-support 3.13-b18، مع وحدة تحكم و`input()` وإيقاف ومهلة تنفيذ.
 - مشاريع محلية، محرر بتلوين Python، تبويبات، استيراد/تصدير، وإعدادات.
 - مساعد ذكي اختياري بمزوّد قابل للتهيئة؛ المفتاح في Keychain ولا يُحزم مع التطبيق.
-- سير عمل GitHub Actions لبناء IPA غير موقّع: `.github/workflows/ios-ipa.yml`.
+- سير عمل GitHub Actions لبناء IPA غير موقّع واختبار CPython على المحاكي: `.github/workflows/ios-ipa.yml`.
+- آخر بناء ناجح: [GitHub Actions](https://github.com/moha700m/Pythonst3/actions/runs/43499206551) — artifact `Pythonst3-unsigned-IPA`.
 - تفاصيل البناء والقيود في [IOS_BUILD.md](IOS_BUILD.md).
 
 > الـ IPA الناتج غير موقّع وغير قابل للتثبيت قبل توقيعه بواسطة المالك (ESign). لم يتم إنشاء أي موارد سحابية مدفوعة.
