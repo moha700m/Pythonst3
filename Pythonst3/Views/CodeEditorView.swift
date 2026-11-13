@@ -37,6 +37,7 @@ struct CodeEditorView: UIViewRepresentable {
         var parent: CodeEditorView
         weak var container: CodeEditorContainerView?
         private var highlightWorkItem: DispatchWorkItem?
+        private var isApplyingEdit = false
 
         init(_ parent: CodeEditorView) {
             self.parent = parent
@@ -46,6 +47,96 @@ struct CodeEditorView: UIViewRepresentable {
             parent.text = textView.text ?? ""
             container?.refreshChrome()
             scheduleHighlight()
+        }
+
+        func textView(
+            _ textView: UITextView,
+            shouldChangeTextIn range: NSRange,
+            replacementText text: String
+        ) -> Bool {
+            if isApplyingEdit || textView.markedTextRange != nil { return true }
+            if text == "\n" {
+                return insertSmartNewline(in: textView, range: range)
+            }
+            guard text.count == 1, let character = text.first else { return true }
+            return handle(character, in: textView, range: range)
+        }
+
+        /// Keeps Python indentation when the line opens a block, and closes
+        /// brackets/quotes without ever doubling them.
+        private func insertSmartNewline(in textView: UITextView, range: NSRange) -> Bool {
+            let content = textView.text ?? ""
+            let ns = content as NSString
+            guard range.location <= ns.length else { return true }
+
+            var lineStart = range.location
+            while lineStart > 0 && ns.character(at: lineStart - 1) != 10 {
+                lineStart -= 1
+            }
+            let prefix = ns.substring(with: NSRange(location: lineStart, length: range.location - lineStart))
+            let indentation = String(prefix.prefix { $0 == " " || $0 == "\t" })
+            let extra = prefix.trimmingCharacters(in: .whitespaces).hasSuffix(":") ? "    " : ""
+
+            isApplyingEdit = true
+            textView.selectedRange = range
+            textView.insertText("\n" + indentation + extra)
+            isApplyingEdit = false
+            return false
+        }
+
+        private func handle(_ character: Character, in textView: UITextView, range: NSRange) -> Bool {
+            let pairs: [Character: Character] = [
+                "(": ")", "[": "]", "{": "}", "\"": "\"", "'": "'"
+            ]
+            let closers: Set<Character> = [")", "]", "}", "\"", "'"]
+            let content = textView.text ?? ""
+            let ns = content as NSString
+            let typed = String(character).utf16.first ?? 0
+
+            // Typing the closer that is already there should step over it.
+            if closers.contains(character), range.length == 0, range.location < ns.length {
+                if ns.character(at: range.location) == typed {
+                    textView.selectedRange = NSRange(location: range.location + 1, length: 0)
+                    return false
+                }
+            }
+
+            guard let closer = pairs[character] else { return true }
+
+            if range.length > 0 {
+                let selected = ns.substring(with: range)
+                isApplyingEdit = true
+                textView.selectedRange = range
+                textView.insertText(String(character) + selected + String(closer))
+                isApplyingEdit = false
+                textView.selectedRange = NSRange(
+                    location: range.location + 1,
+                    length: (selected as NSString).length
+                )
+                return false
+            }
+
+            if range.location < ns.length {
+                let next = ns.character(at: range.location)
+                let closing = String(closer).utf16.first ?? 0
+                if next == typed || next == closing {
+                    // The closer is already there: insert the opener once and stop.
+                    isApplyingEdit = true
+                    textView.selectedRange = range
+                    textView.insertText(String(character))
+                    isApplyingEdit = false
+                    return false
+                }
+                let boundaries: Set<unichar> = [32, 9, 10, 41, 93, 125, 44, 58]
+                guard boundaries.contains(next) else { return true }
+            }
+
+            isApplyingEdit = true
+            textView.selectedRange = range
+            textView.insertText(String(character) + String(closer))
+            isApplyingEdit = false
+            textView.selectedRange = NSRange(location: range.location + 1, length: 0)
+            return false
         }
 
         func textViewDidChangeSelection(_ textView: UITextView) {

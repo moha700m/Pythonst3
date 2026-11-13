@@ -35,7 +35,9 @@ struct RootView: View {
         .sheet(isPresented: $app.showingSettings) {
             SettingsView()
         }
-        .sheet(isPresented: $app.showingAssistant) {
+        .sheet(isPresented: $app.showingAssistant, onDismiss: {
+            app.discardPendingProposal()
+        }) {
             AIAssistantView()
         }
         .onAppear {

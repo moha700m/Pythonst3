@@ -2,6 +2,19 @@ import Foundation
 import Combine
 import UIKit
 
+struct CodeProposal: Identifiable {
+    let id = UUID()
+    let path: String
+    let previousContent: String
+    let proposedContent: String
+    let summary: String
+}
+
+struct AgentUndo {
+    let path: String
+    let previousContent: String
+}
+
 final class AppModel: ObservableObject {
     struct Banner: Identifiable {
         let id = UUID()
@@ -21,6 +34,8 @@ final class AppModel: ObservableObject {
     @Published var showingExporter = false
     @Published var exportDocument: ProjectDocument?
     @Published var exportFilename = "project.pythonst3"
+    @Published var pendingProposal: CodeProposal?
+    @Published var agentUndo: AgentUndo?
 
     let store = ProjectStore()
     let runtime = PythonRuntime.shared
@@ -35,6 +50,13 @@ final class AppModel: ObservableObject {
 
     init() {
         reloadProjects()
+        // Unit tests exercise the runtime directly; do not open a project behind them.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+            return
+        }
+        if ProcessInfo.processInfo.arguments.contains("--pythonst3-home") {
+            return
+        }
         if ProcessInfo.processInfo.arguments.contains("--pythonst3-demo") {
             openDemoProjectIfNeeded()
             return
@@ -375,6 +397,71 @@ final class AppModel: ObservableObject {
         case .failure(let error):
             show(error)
         }
+    }
+
+    // MARK: - AI proposals
+
+    /// The assistant never writes to disk on its own. It stages a proposal; the
+    /// workspace shows a line diff, and only an explicit approval applies it.
+    func proposeAssistantCode(_ code: String, path: String?, summary: String) {
+        guard let project = selectedProject else {
+            showMessage("افتح مشروعاً أولاً ثم طبّق الكود المقترح.")
+            return
+        }
+        let targetPath = path ?? activePath ?? project.entrypoint
+        guard let file = files.first(where: { $0.path == targetPath }) else {
+            showMessage("لم يتم العثور على الملف \(targetPath).")
+            return
+        }
+        var normalized = code.trimmingCharacters(in: .newlines)
+        guard !normalized.isEmpty else {
+            showMessage("الاقتراح لا يحتوي كوداً قابلاً للتطبيق.")
+            return
+        }
+        normalized += "\n"
+        pendingProposal = CodeProposal(
+            path: targetPath,
+            previousContent: file.content,
+            proposedContent: normalized,
+            summary: summary
+        )
+    }
+
+    func applyPendingProposal() {
+        guard let proposal = pendingProposal,
+              let index = files.firstIndex(where: { $0.path == proposal.path }) else {
+            pendingProposal = nil
+            return
+        }
+        agentUndo = AgentUndo(path: proposal.path, previousContent: proposal.previousContent)
+        files[index].content = proposal.proposedContent
+        if !openPaths.contains(proposal.path) {
+            openPaths.append(proposal.path)
+        }
+        activePath = proposal.path
+        saveActiveNow()
+        pendingProposal = nil
+        showMessage("تم تطبيق التعديل على \(proposal.path). يمكنك التراجع من قائمة المحرر.")
+    }
+
+    func discardPendingProposal() {
+        pendingProposal = nil
+    }
+
+    func undoAgentChange() {
+        guard let undo = agentUndo,
+              let index = files.firstIndex(where: { $0.path == undo.path }) else {
+            showMessage("لا يوجد تعديل سابق للتراجع عنه.")
+            return
+        }
+        files[index].content = undo.previousContent
+        if !openPaths.contains(undo.path) {
+            openPaths.append(undo.path)
+        }
+        activePath = undo.path
+        saveActiveNow()
+        agentUndo = nil
+        showMessage("تم التراجع عن التعديل واستعادة النسخة السابقة.")
     }
 
     func showMessage(_ text: String) {

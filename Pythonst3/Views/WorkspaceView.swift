@@ -29,7 +29,8 @@ struct WorkspaceView: View {
                 ConsoleView(
                     runtime: runtime,
                     expanded: $consoleExpanded,
-                    height: consoleHeight(for: proxy.size.height)
+                    height: consoleHeight(for: proxy.size.height),
+                    projectURL: app.selectedProject.map { app.store.folderURL(for: $0) }
                 )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -176,6 +177,13 @@ struct WorkspaceView: View {
                 } label: {
                     Label("لصق من الحافظة", systemImage: "doc.on.clipboard")
                 }
+                Button {
+                    app.undoAgentChange()
+                } label: {
+                    Label("تراجع عن تعديل الذكاء الاصطناعي", systemImage: "arrow.uturn.backward")
+                }
+                .disabled(app.agentUndo == nil)
+
                 Button {
                     app.saveActiveNow()
                 } label: {

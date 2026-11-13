@@ -125,6 +125,10 @@ struct AIAssistantView: View {
                             responsePanel
                         }
 
+                        if let block = suggestedBlock {
+                            suggestionPanel(block)
+                        }
+
                         Text("المساعد لا يعدّل ملفاتك تلقائياً. راجع أي كود قبل نسخه. لا تُرسل أسراراً أو مفاتيح داخل الطلب.")
                             .font(CyberTheme.arabic(11))
                             .foregroundStyle(CyberTheme.textMuted)
@@ -144,6 +148,62 @@ struct AIAssistantView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .sheet(item: $app.pendingProposal) { proposal in
+            DiffApprovalView(proposal: proposal)
+        }
+    }
+
+    private var suggestedBlock: CodeExtraction.Block? {
+        guard !response.isEmpty else { return nil }
+        return CodeExtraction.preferredBlock(in: response)
+    }
+
+    private func suggestionPanel(_ block: CodeExtraction.Block) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 7) {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 12))
+                    .foregroundStyle(CyberTheme.neonGreen)
+                Text("كود مقترح جاهز للمراجعة")
+                    .font(CyberTheme.arabic(13, weight: .semibold))
+                    .foregroundStyle(CyberTheme.textPrimary)
+                Spacer(minLength: 4)
+                Text("\(block.lineCount) سطراً")
+                    .font(CyberTheme.mono(9.5))
+                    .foregroundStyle(CyberTheme.textMuted)
+            }
+
+            Text("سيُطبَّق على «\(app.activeFile?.path ?? "لا يوجد ملف")» فقط بعد عرض الفرق وموافقتك.")
+                .font(CyberTheme.arabic(11))
+                .foregroundStyle(CyberTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                applySuggestion(block)
+            } label: {
+                Label("مراجعة الفرق وتطبيقه", systemImage: "diff")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(CyberButtonStyle(filled: true))
+            .disabled(app.activeFile == nil)
+            .opacity(app.activeFile == nil ? 0.45 : 1)
+
+            if app.activeFile == nil {
+                Text("افتح ملفاً من مساحة العمل أولاً.")
+                    .font(CyberTheme.arabic(10.5))
+                    .foregroundStyle(CyberTheme.amber)
+            }
+        }
+        .padding(12)
+        .neonPanel(accent: CyberTheme.neonGreen, cornerRadius: 12)
+    }
+
+    private func applySuggestion(_ block: CodeExtraction.Block) {
+        guard let file = app.activeFile else {
+            errorMessage = "افتح ملفاً أولاً لتطبيق الاقتراح."
+            return
+        }
+        app.proposeAssistantCode(block.code, path: file.path, summary: action)
     }
 
     private var statusPanel: some View {

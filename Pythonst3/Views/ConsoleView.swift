@@ -1,12 +1,15 @@
 import SwiftUI
+import UIKit
 
 struct ConsoleView: View {
     @ObservedObject var runtime: PythonRuntime
     @Binding var expanded: Bool
     let height: CGFloat
+    let projectURL: URL?
 
     @AppStorage("console.fontSize") private var fontSize: Double = 12
     @State private var inputText = ""
+    @State private var replInput = ""
     @FocusState private var inputFocused: Bool
 
     var body: some View {
@@ -46,6 +49,10 @@ struct ConsoleView: View {
                     }
                 }
 
+                if runtime.pendingInput == nil {
+                    replBar
+                }
+
                 if let pending = runtime.pendingInput {
                     inputBar(pending)
                 }
@@ -81,6 +88,17 @@ struct ConsoleView: View {
                 .foregroundStyle(CyberTheme.textSecondary)
             Spacer(minLength: 4)
             StatusPill(text: runtime.state.label, color: statusColor)
+            Button {
+                let output = runtime.lines.map(\.text).joined(separator: "\n")
+                UIPasteboard.general.string = output
+            } label: {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 11))
+                    .foregroundStyle(CyberTheme.textSecondary)
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("نسخ الإخراج")
             Button {
                 runtime.clearConsole()
             } label: {
@@ -134,6 +152,53 @@ struct ConsoleView: View {
         case .failed: return CyberTheme.danger
         case .idle: return CyberTheme.textMuted
         }
+    }
+
+    private var replBar: some View {
+        HStack(spacing: 6) {
+            Text(">>>")
+                .font(CyberTheme.mono(12, weight: .bold))
+                .foregroundStyle(CyberTheme.neonGreen)
+
+            TextField("سطر Python — المتغيرات تبقى بين الأوامر", text: $replInput)
+                .font(CyberTheme.mono(12))
+                .foregroundStyle(CyberTheme.textPrimary)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.go)
+                .onSubmit { submitREPL() }
+                .padding(.horizontal, 8)
+                .frame(height: 34)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(CyberTheme.background)
+                )
+
+            Button {
+                submitREPL()
+            } label: {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 23))
+                    .foregroundStyle(
+                        replInput.trimmingCharacters(in: .whitespaces).isEmpty || runtime.state.isBusy
+                            ? CyberTheme.textMuted
+                            : CyberTheme.neonGreen
+                    )
+            }
+            .buttonStyle(.plain)
+            .disabled(replInput.trimmingCharacters(in: .whitespaces).isEmpty || runtime.state.isBusy)
+            .accessibilityLabel("تنفيذ الأمر")
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(CyberTheme.surfaceElevated.opacity(0.9))
+    }
+
+    private func submitREPL() {
+        let command = replInput
+        replInput = ""
+        guard let projectURL else { return }
+        runtime.evaluateREPL(command, projectURL: projectURL, timeout: 15)
     }
 
     private func inputBar(_ pending: InputRequest) -> some View {

@@ -120,6 +120,56 @@ final class PythonRuntime: ObservableObject {
         }
     }
 
+    /// Executes one console entry against a persistent `__main__` namespace, so
+    /// variables survive between entries. Expressions print through displayhook.
+    func evaluateREPL(_ source: String, projectURL: URL, timeout: Int) {
+        let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !state.isBusy else { return }
+
+        inputLock.lock()
+        stopRequested = false
+        inputLock.unlock()
+
+        flushBuffers()
+        append(">>> \(trimmed)", kind: .command)
+        state = .running
+
+        queue.async { [weak self] in
+            guard let self else { return }
+            if !self.initialized {
+                if !self.initializeRuntime() {
+                    self.publish(.failed("تعذر تهيئة مفسر Python المدمج."))
+                    return
+                }
+                self.initialized = true
+            }
+
+            pythonst3_set_timeout(Int32(max(1, min(timeout, 300))))
+            let payload = trimmed + "\n"
+            let status = payload.withCString { sourcePointer in
+                projectURL.path.withCString { directoryPointer in
+                    pythonst3_repl(sourcePointer, directoryPointer)
+                }
+            }
+
+            DispatchQueue.main.async {
+                self.flushBuffers()
+                self.lastExitCode = status
+                switch status {
+                case 0:
+                    break
+                case 2:
+                    self.append("⏹ تم إيقاف الأمر", kind: .info)
+                case 3:
+                    self.append("⏹ خرج البرنامج عبر SystemExit", kind: .info)
+                default:
+                    self.append("✕ خطأ في الأمر", kind: .stderr)
+                }
+                self.state = .ready
+            }
+        }
+    }
+
     func stop() {
         inputLock.lock()
         stopRequested = true

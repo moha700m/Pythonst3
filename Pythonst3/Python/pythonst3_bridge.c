@@ -16,6 +16,7 @@ static atomic_int g_stop = 0;
 static int g_timeout_seconds = 30;
 static time_t g_deadline = 0;
 static PyObject *g_bootstrap_globals = NULL;
+static PyObject *g_repl_globals = NULL;
 
 void pythonst3_set_callbacks(pythonst3_write_cb write_cb, pythonst3_readline_cb readline_cb) {
     g_write_cb = write_cb;
@@ -332,6 +333,113 @@ int pythonst3_execute(const char *source, const char *filename, const char *proj
     }
 
     Py_DECREF(globals);
+    PyGILState_Release(gil);
+    return result;
+}
+
+static PyObject *repl_globals(void) {
+    if (g_repl_globals) {
+        return g_repl_globals;
+    }
+    PyObject *globals = PyDict_New();
+    if (!globals) {
+        return NULL;
+    }
+    PyObject *builtins = PyEval_GetBuiltins();
+    if (builtins) {
+        PyDict_SetItemString(globals, "__builtins__", builtins);
+    }
+    PyObject *name = PyUnicode_FromString("__main__");
+    if (name) {
+        PyDict_SetItemString(globals, "__name__", name);
+        Py_DECREF(name);
+    }
+    g_repl_globals = globals;
+    return g_repl_globals;
+}
+
+/* Runs one console entry in a persistent __main__ namespace, so variables
+   defined in earlier entries stay available. */
+int pythonst3_repl(const char *source, const char *project_dir) {
+    if (!atomic_load(&g_initialized) || !source) {
+        return -1;
+    }
+
+    atomic_store(&g_stop, 0);
+    g_deadline = g_timeout_seconds > 0 ? time(NULL) + g_timeout_seconds : 0;
+
+    PyGILState_STATE gil = PyGILState_Ensure();
+    int result = 1;
+
+    if (project_dir && chdir(project_dir) == 0) {
+        PyObject *path = PySys_GetObject("path");
+        PyObject *directory = PyUnicode_FromString(project_dir);
+        if (path && directory) {
+            if (PyList_Size(path) > 0) {
+                PyList_SetItem(path, 0, directory);
+            } else {
+                PyList_Append(path, directory);
+                Py_DECREF(directory);
+            }
+        } else {
+            Py_XDECREF(directory);
+        }
+    }
+
+    install_trace_hook();
+
+    PyObject *globals = repl_globals();
+    if (!globals) {
+        PyErr_Print();
+        PyGILState_Release(gil);
+        return 1;
+    }
+
+    PyObject *code = Py_CompileString(source, "<pythonst3-console>", Py_single_input);
+    if (!code) {
+        if (atomic_load(&g_stop) || PyErr_ExceptionMatches(PyExc_TimeoutError)) {
+            PyErr_Clear();
+            result = 2;
+        } else {
+            PyErr_Print();
+            result = 1;
+        }
+    } else {
+        PyObject *evaluated = PyEval_EvalCode(code, globals, globals);
+        Py_DECREF(code);
+        if (!evaluated) {
+            if (atomic_load(&g_stop) || PyErr_ExceptionMatches(PyExc_TimeoutError)) {
+                PyErr_Clear();
+                result = 2;
+            } else if (PyErr_ExceptionMatches(PyExc_SystemExit)) {
+                PyErr_Clear();
+                result = 3;
+            } else {
+                PyErr_Print();
+                result = 1;
+            }
+        } else {
+            Py_DECREF(evaluated);
+            result = 0;
+        }
+    }
+
+    PyObject *sys = PyImport_ImportModule("sys");
+    if (sys) {
+        const char *stream_names[] = {"stdout", "stderr"};
+        for (int i = 0; i < 2; i++) {
+            PyObject *stream = PyObject_GetAttrString(sys, stream_names[i]);
+            if (stream) {
+                PyObject *flushed = PyObject_CallMethod(stream, "flush", NULL);
+                Py_XDECREF(flushed);
+                Py_DECREF(stream);
+            }
+        }
+        Py_DECREF(sys);
+    } else {
+        PyErr_Clear();
+    }
+
     PyGILState_Release(gil);
     return result;
 }

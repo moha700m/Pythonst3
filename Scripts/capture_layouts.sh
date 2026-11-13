@@ -42,7 +42,7 @@ capture() {
 
     xcrun simctl install "$udid" "$APP"
 
-    xcrun simctl launch "$udid" "$BUNDLE_ID" >/dev/null
+    xcrun simctl launch "$udid" "$BUNDLE_ID" --pythonst3-home >/dev/null
     sleep 2
     xcrun simctl io "$udid" screenshot "$OUT/$slug-list.png"
 
