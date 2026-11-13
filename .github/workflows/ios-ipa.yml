@@ -21,7 +21,7 @@ concurrency:
 jobs:
   build-ipa:
     name: Build unsigned IPA
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
 
     steps:
@@ -105,12 +105,23 @@ jobs:
           xcodebuild test \
             -project Pythonst3.xcodeproj \
             -scheme Pythonst3 \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=latest' \
             -derivedDataPath build-tests \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             ONLY_ACTIVE_ARCH=YES | tee test.log
+
+      - name: Capture iPhone layout matrix
+        run: ./Scripts/capture_layouts.sh "build-tests/Build/Products/Debug-iphonesimulator/Pythonst3.app" screenshots
+
+      - name: Upload layout screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: iphone-layout-screenshots
+          path: screenshots/
+          retention-days: 30
+          if-no-files-found: error
 
       - name: Package unsigned IPA
         run: |

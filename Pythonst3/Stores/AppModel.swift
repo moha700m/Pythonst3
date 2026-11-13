@@ -28,6 +28,23 @@ final class AppModel: ObservableObject {
 
     init() {
         reloadProjects()
+        if ProcessInfo.processInfo.arguments.contains("--pythonst3-demo") {
+            openDemoProjectIfNeeded()
+        }
+    }
+
+    private func openDemoProjectIfNeeded() {
+        if let existing = projects.first(where: { $0.name == "Demo Project" }) {
+            open(existing)
+            return
+        }
+        do {
+            let project = try store.createProject(name: "Demo Project")
+            reloadProjects()
+            open(project)
+        } catch {
+            show(error)
+        }
     }
 
     var activeFile: ScriptFile? {
