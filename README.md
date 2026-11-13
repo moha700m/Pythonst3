@@ -57,8 +57,8 @@ Pythonst3 ليس مجرد محرر داخل المتصفح. المنتج يتك�
 - REPL مستمر في وحدة التحكم، مع نسخ الإخراج.
 - محرر بمسافة بادئة تلقائية وإغلاق أقواس/اقتباسات وأرقام أسطر وتلوين Python.
 - سير عمل GitHub Actions لبناء IPA غير موقّع واختبار CPython على المحاكي: `.github/workflows/ios-ipa.yml`.
-- آخر بناء ناجح على `main`: [GitHub Actions](https://github.com/moha700m/Pythonst3/actions/runs/43504552227) — artifact `Pythonst3-unsigned-IPA`.
-- تطوير الواجهة الجديدة على فرع `pythonista-ai-v2` قبل دمجه في `main`.
+- آخر بناء موثّق: [GitHub Actions](https://github.com/moha700m/Pythonst3/actions/runs/43520998546) — artifact `Pythonst3-unsigned-IPA` (20.5MB، غير موقّع).
+- التطوير جرى على فرع `pythonista-ai-v2` ثم دُمج في `main` بعد نجاح البناء.
 - تفاصيل البناء والقيود في [IOS_BUILD.md](IOS_BUILD.md).
 
 > الـ IPA الناتج غير موقّع وغير قابل للتثبيت قبل توقيعه بواسطة المالك (ESign). لم يتم إنشاء أي موارد سحابية مدفوعة.
