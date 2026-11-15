@@ -71,3 +71,39 @@ shasum -a 256 Pythonst3-unsigned.ipa
 6. عند أول تشغيل، افتح المحرر مباشرة واكتب أو الصق كوداً ثم اضغط «تشغيل».
 
 > الـ IPA غير موقّع ولن يُثبَّت قبل توقيعه. لا توجد شهادات أو مفاتيح في المستودع.
+
+
+## 5. بناء C++ إلى EXE على Windows
+
+هذا سير مستقل عن بناء تطبيق iOS:
+
+- Workflow: `.github/workflows/build-cpp-windows.yml`
+- Runner: `windows-latest` مع MSVC x64.
+- المعايير: C++14 وC++17 وC++20 وC++23.
+- الأنواع: `CONSOLE` أو `WINDOWS`.
+- الناتج: `main.exe` و`main.cpp` و`build.log` و`build-info.txt` داخل Artifact ZIP لمدة 3 أيام.
+
+### التشغيل اليدوي
+
+1. افتح تبويب Actions ثم اختر **Windows C++ Build**.
+2. اضغط **Run workflow**.
+3. أدخل `request_id` فريداً.
+4. حوّل ملف `main.cpp` إلى Base64 UTF-8 وألصقه في `source_b64`.
+5. اختر معيار C++ ونوع البرنامج ثم شغّل Workflow.
+6. نزّل Artifact باسم `windows-cpp-build-<request_id>` بعد نجاح البناء.
+
+مثال PowerShell لتحويل الملف:
+
+```powershell
+$source = Get-Content -Raw .\main.cpp
+$b64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($source))
+```
+
+### ربط M C++ Studio
+
+- يُحفظ Fine-grained Personal Access Token في AppDeploy Secrets باسم `GITHUB_ACTIONS_TOKEN`.
+- امنح الرمز صلاحية **Actions: Read and write** على مستودع `Pythonst3` فقط.
+- لا تضع الرمز في المستودع أو داخل كود الواجهة.
+- يرسل الموقع طلب `workflow_dispatch` ويتابع حالة التشغيل ثم يعرض رابط Artifact.
+
+> تنبيه: GitHub-hosted Windows runner مخصص للبناء غير التفاعلي؛ لا يعرض نافذة البرنامج داخل المتصفح ولا يشغّل EXE بعد بنائه. المعاينة والتحكم في واجهة Windows يتطلبان Windows Worker ذاتياً مع جلسة سطح مكتب تفاعلية مرئية. سير البناء الحالي لا يشغّل ملفات المستخدم التنفيذية.
