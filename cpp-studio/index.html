@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080a0d"><title>M C++ Studio — GitHub Edition</title>
+<style>
+:root{color-scheme:dark;--bg:#080a0d;--panel:#101419;--line:#252c34;--muted:#87919c;--text:#f2f5f7;--lime:#c4f36b;--blue:#78a9ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% -10%,#24321d 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1080px;margin:auto;padding:28px 18px 60px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:18px}.brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:.04em}.logo{width:42px;height:42px;border:1px solid #52633d;border-radius:12px;display:grid;place-items:center;color:var(--lime);font-weight:900;font-size:20px;background:#171f13}.pill{border:1px solid #3d5130;color:var(--lime);border-radius:99px;padding:4px 10px;font-size:12px}
+.hero{padding:48px 0 28px}.eyebrow{color:var(--lime);font-size:12px;letter-spacing:.16em;font-weight:800}.hero h1{font-size:clamp(30px,6vw,52px);line-height:1.12;margin:10px 0}.hero p{color:var(--muted);max-width:650px;margin:12px 0}
+.layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(250px,.8fr);gap:16px}.panel{background:linear-gradient(145deg,#12171d,#0e1217);border:1px solid var(--line);border-radius:16px;padding:18px;min-width:0}.panel h2{font-size:17px;margin:0 0 14px}.field{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}label{font-size:13px;color:#c7d0d8}textarea{width:100%;min-height:330px;resize:vertical;background:#080b0f;border:1px solid #303943;border-radius:12px;padding:14px;color:#d8e7c4;font:13px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;direction:ltr;text-align:left;outline:none}textarea:focus,select:focus{border-color:var(--lime)}select,input{background:#0a0e12;border:1px solid #303943;border-radius:9px;color:var(--text);padding:10px;width:100%}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.meta{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;margin-top:5px}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}button,.button{border:0;border-radius:10px;padding:11px 16px;font-weight:750;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}.primary{background:var(--lime);color:#10150b}.secondary{background:#202832;color:#e8edf2;border:1px solid #36414d}.hint{color:var(--muted);font-size:13px}.step{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.num{flex:0 0 27px;height:27px;border-radius:8px;background:#202b18;color:var(--lime);display:grid;place-items:center;font-weight:800}.step b{display:block;font-size:13px}.step small{color:var(--muted)}.warning{border:1px solid #584a25;background:#201b10;color:#e9d9a9;border-radius:12px;padding:12px;font-size:12px;margin-top:14px}.status{font-size:12px;color:var(--lime);min-height:22px;margin-top:8px}.footer{color:#65707b;font-size:12px;text-align:center;padding-top:28px}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.hero{padding-top:32px}.top{align-items:flex-start}.row{grid-template-columns:1fr}textarea{min-height:270px}}
+</style></head>
+<body><main>
+<header class="top"><div class="brand"><div class="logo">M</div><div>M C++ STUDIO<br><small style="color:var(--muted);font-size:11px;font-weight:500">GITHUB EDITION</small></div></div><span class="pill">100% GitHub workflow</span></header>
+<section class="hero"><div class="eyebrow">WRITE · ENCODE · BUILD</div><h1>من كود C++ إلى<br><span style="color:var(--lime)">Windows EXE</span></h1><p>واجهة خفيفة لتحضير كودك وإرساله إلى GitHub Actions. البناء يتم على Windows باستخدام MSVC x64، بدون خادم خارجي أو مفاتيح API داخل المتصفح.</p></section>
+<div class="layout">
+<section class="panel"><h2>01 / محرر المصدر</h2><div class="field"><label for="source">الصق كود C++ هنا</label><textarea id="source" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="#include <iostream>\n\nint main() {\n    std::cout << \"Hello, Windows!\";\n    return 0;\n}"></textarea><div class="meta"><span id="bytes">0 / 46,000 bytes</span><span>UTF-8 · Base64</span></div></div>
+<div class="row"><div class="field"><label for="standard">معيار C++</label><select id="standard"><option value="c++20">C++20</option><option value="c++23">C++23</option><option value="c++17">C++17</option><option value="c++14">C++14</option></select></div><div class="field"><label for="subsystem">نوع التطبيق</label><select id="subsystem"><option value="CONSOLE">Console</option><option value="WINDOWS">Windows GUI</option></select></div></div>
+<div class="actions"><button class="primary" id="prepare">جهّز الكود للبناء ↗</button><button class="secondary" id="clear">مسح المحرر</button></div><div class="status" id="status" role="status"></div><div class="field" style="margin-top:14px"><label for="encoded">النص المشفّر Base64 — انسخه إلى نموذج GitHub</label><textarea id="encoded" readonly style="min-height:92px;color:#aeb8c3" placeholder="سيظهر هنا بعد تجهيز الكود"></textarea></div><button class="secondary" id="copy" style="width:100%">نسخ Base64</button></section>
+<aside class="panel"><h2>02 / تشغيل البناء على GitHub</h2>
+<div class="step"><span class="num">1</span><div><b>جهّز الكود</b><small>اضغط الزر وسيتم فحص الحجم وتحويل النص إلى Base64.</small></div></div>
+<div class="step"><span class="num">2</span><div><b>افتح Windows C++ Build</b><small>انتقل إلى صفحة Actions في المستودع.</small></div></div>
+<div class="step"><span class="num">3</span><div><b>Run workflow</b><small>الصق Base64 في source_b64، واختر نفس المعيار والنوع أعلاه، واكتب request_id فريد.</small></div></div>
+<div class="step"><span class="num">4</span><div><b>نزّل ملف EXE</b><small>بعد نجاح التشغيل، افتح Artifacts وحمّل الملف.</small></div></div>
+<a class="button primary" style="width:100%;margin-top:18px" href="https://github.com/moha700m/Pythonst3/actions/workflows/build-cpp-windows.yml" target="_blank" rel="noopener">فتح GitHub Actions ↗</a>
+<a class="button secondary" style="width:100%;margin-top:9px" href="https://github.com/moha700m/Pythonst3" target="_blank" rel="noopener">فتح المستودع</a>
+<div class="warning">مهم: GitHub Pages موقع ثابت، لذلك لا نخزّن Personal Access Token في المتصفح. يلزم تشغيل Workflow يدوياً من GitHub. هذا يمنع كشف صلاحيات المستودع للزوار.</div>
+<p class="hint" style="margin-top:14px">Windows GUI يُبنى كملف EXE فقط. GitHub-hosted runner لا يعرض نافذة البرنامج داخل صفحة الموقع ولا يشغّل ملفات المستخدم.</p>
+</aside></div>
+<div class="footer">M C++ Studio · Hosted with GitHub Pages · Built with GitHub Actions</div>
+</main>
+<script>
+const source=document.getElementById('source'), encoded=document.getElementById('encoded'), status=document.getElementById('status'), bytes=document.getElementById('bytes');
+function getBytes(){return new TextEncoder().encode(source.value)}
+function update(){const n=getBytes().length;bytes.textContent=n.toLocaleString()+' / 46,000 bytes';bytes.style.color=n>46000?'#ff7777':'#87919c'}
+source.addEventListener('input',update);
+document.getElementById('prepare').addEventListener('click',()=>{const raw=getBytes();if(!source.value.trim()){status.textContent='الصق كود C++ أولاً.';return}if(raw.length>46000){status.textContent='حجم الكود يتجاوز 46,000 بايت.';return}let binary='';for(let i=0;i<raw.length;i+=0x8000)binary+=String.fromCharCode(...raw.subarray(i,i+0x8000));encoded.value=btoa(binary);status.textContent='جاهز: '+raw.length.toLocaleString()+' بايت. في GitHub اختر '+document.getElementById('standard').value+' و'+document.getElementById('subsystem').value+' ثم الصق Base64.';});
+document.getElementById('copy').addEventListener('click',async()=>{if(!encoded.value){status.textContent='جهّز الكود أولاً.';return}try{await navigator.clipboard.writeText(encoded.value);status.textContent='تم نسخ Base64.'}catch{encoded.focus();encoded.select();status.textContent='حدّد النص وانسخه يدوياً.'}});
+document.getElementById('clear').addEventListener('click',()=>{source.value='';encoded.value='';status.textContent='تم مسح المحرر.';update()});
+update();
+</script></body></html>
