@@ -53,7 +53,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout smoke-test source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Prepare isolated build workspace
         shell: pwsh
@@ -114,7 +114,7 @@ jobs:
 
       - name: Upload Windows EXE and diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-cpp-build-${{ inputs.request_id || github.event.client_payload.request_id || github.run_id }}
           path: artifacts/
