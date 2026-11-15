@@ -1,0 +1,107 @@
+name: Windows C++ Build
+
+run-name: C++ Build ${{ inputs.request_id || github.event.client_payload.request_id || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: Request identifier
+        required: true
+        type: string
+      source_b64:
+        description: UTF-8 C++ source encoded as Base64
+        required: true
+        type: string
+      standard:
+        description: C++ language standard
+        required: true
+        default: c++20
+        type: choice
+        options:
+          - c++14
+          - c++17
+          - c++20
+          - c++23
+      subsystem:
+        description: Windows application subsystem
+        required: true
+        default: CONSOLE
+        type: choice
+        options:
+          - CONSOLE
+          - WINDOWS
+  repository_dispatch:
+    types: [cpp-build]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpp-build-${{ github.event.client_payload.request_id || inputs.request_id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Compile Windows EXE
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Prepare isolated build workspace
+        shell: pwsh
+        env:
+          SOURCE_B64: ${{ github.event.client_payload.source_b64 || inputs.source_b64 }}
+          CPP_STANDARD: ${{ github.event.client_payload.standard || inputs.standard || 'c++20' }}
+          CPP_SUBSYSTEM: ${{ github.event.client_payload.subsystem || inputs.subsystem || 'CONSOLE' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:SOURCE_B64)) { throw 'Missing C++ source payload.' }
+          if ($env:SOURCE_B64.Length -gt 62000) { throw 'Source payload exceeds the 62 KB encoded limit.' }
+          if ($env:CPP_STANDARD -notin @('c++14','c++17','c++20','c++23')) { throw 'Unsupported C++ standard.' }
+          if ($env:CPP_SUBSYSTEM -notin @('CONSOLE','WINDOWS')) { throw 'Unsupported Windows subsystem.' }
+          $bytes = [Convert]::FromBase64String($env:SOURCE_B64)
+          if ($bytes.Length -gt 46000) { throw 'Decoded source exceeds the 46 KB limit.' }
+          $source = [Text.Encoding]::UTF8.GetString($bytes)
+          if ([string]::IsNullOrWhiteSpace($source)) { throw 'Source file is empty.' }
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          [IO.File]::WriteAllText((Join-Path $PWD 'main.cpp'), $source, [Text.UTF8Encoding]::new($false))
+          Copy-Item main.cpp artifacts/main.cpp
+          "CPP_STANDARD=$env:CPP_STANDARD" | Out-File -FilePath artifacts/build-info.txt -Encoding utf8
+          "SUBSYSTEM=$env:CPP_SUBSYSTEM" | Out-File -FilePath artifacts/build-info.txt -Append -Encoding utf8
+          "SOURCE_BYTES=$($bytes.Length)" | Out-File -FilePath artifacts/build-info.txt -Append -Encoding utf8
+
+      - name: Configure MSVC toolchain
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Compile with MSVC
+        shell: pwsh
+        env:
+          CPP_STANDARD: ${{ github.event.client_payload.standard || inputs.standard || 'c++20' }}
+          CPP_SUBSYSTEM: ${{ github.event.client_payload.subsystem || inputs.subsystem || 'CONSOLE' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Join-Path $PWD 'artifacts\main.exe'
+          $log = Join-Path $PWD 'artifacts\build.log'
+          $args = @('/nologo', "/std:$env:CPP_STANDARD", '/EHsc', '/W4', '/utf-8', '/DUNICODE', '/D_UNICODE', 'main.cpp', '/link', "/SUBSYSTEM:$env:CPP_SUBSYSTEM", "/OUT:$exe")
+          & cl.exe @args 2>&1 | Tee-Object -FilePath $log
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            Write-Error "MSVC compilation failed with exit code $code. See artifacts/build.log."
+            exit $code
+          }
+          if (-not (Test-Path $exe)) { throw 'Compiler returned success but main.exe was not created.' }
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "EXE_SHA256=$hash" | Out-File -FilePath artifacts/build-info.txt -Append -Encoding utf8
+          "EXE_BYTES=$((Get-Item $exe).Length)" | Out-File -FilePath artifacts/build-info.txt -Append -Encoding utf8
+          Get-Item $exe | Format-List Name,Length,LastWriteTime
+
+      - name: Upload Windows EXE and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-cpp-build-${{ inputs.request_id || github.event.client_payload.request_id || github.run_id }}
+          path: artifacts/
+          retention-days: 3
+          if-no-files-found: warn
