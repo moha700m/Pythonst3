@@ -84,7 +84,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $exe = Join-Path $PWD 'artifacts\main.exe'
           $log = Join-Path $PWD 'artifacts\build.log'
-          $compilerArgs = @('/nologo', "/std:$env:CPP_STANDARD", '/EHsc', '/W4', '/utf-8', '/DUNICODE', '/D_UNICODE', 'main.cpp', '/link', "/SUBSYSTEM:$env:CPP_SUBSYSTEM", "/OUT:$exe")
+          $compilerArgs = @('/nologo', "/std:$env:CPP_STANDARD", '/EHsc', '/W4', '/utf-8', '/O1', '/MT', '/DUNICODE', '/D_UNICODE', 'main.cpp', '/link', '/OPT:REF', '/OPT:ICF', "/SUBSYSTEM:$env:CPP_SUBSYSTEM", "/OUT:$exe")
           & cl.exe @compilerArgs 2>&1 | Tee-Object -FilePath $log
           $code = $LASTEXITCODE
           if ($code -ne 0) {
