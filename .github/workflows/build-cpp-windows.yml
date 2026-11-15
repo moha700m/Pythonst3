@@ -143,7 +143,7 @@ jobs:
           @echo off
           call "$devCmd" -no_logo -arch=x64 -host_arch=x64
           if errorlevel 1 exit /b %errorlevel%
-          cl.exe /nologo /std:$env:CPP_STANDARD /EHsc /W4 /utf-8 /O1 /MT /DUNICODE /D_UNICODE "$guiSource" /link /OPT:REF /OPT:ICF /SUBSYSTEM:WINDOWS /OUT:"$guiExe"
+          cl.exe /nologo /std:$env:CPP_STANDARD /EHsc /W4 /utf-8 /O1 /MT /DUNICODE /D_UNICODE "$guiSource" /link /OPT:REF /OPT:ICF /SUBSYSTEM:WINDOWS /OUT:"$guiExe" user32.lib
           exit /b %errorlevel%
           "@
           Set-Content -Path $cmdPath -Value $cmdText -Encoding ascii
