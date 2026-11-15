@@ -78,7 +78,8 @@ shasum -a 256 Pythonst3-unsigned.ipa
 هذا سير مستقل عن بناء تطبيق iOS:
 
 - Workflow: `.github/workflows/build-cpp-windows.yml`
-- Runner: `windows-latest` مع MSVC x64.
+- Runner: `windows-latest` مع MSVC x64 (يُجهّز عبر `vswhere.exe` و`VsDevCmd.bat`).
+- اختبار smoke موثق بنجاح: [run 43700976649](https://github.com/moha700m/Pythonst3/actions/runs/43700976649)، وArtifact يحتوي `main.exe` بحجم 212,992 بايت.
 - المعايير: C++14 وC++17 وC++20 وC++23.
 - الأنواع: `CONSOLE` أو `WINDOWS`.
 - الناتج: `main.exe` و`main.cpp` و`build.log` و`build-info.txt` داخل Artifact ZIP لمدة 3 أيام.
