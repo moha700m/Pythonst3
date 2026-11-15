@@ -12,31 +12,36 @@ main{max-width:1080px;margin:auto;padding:28px 18px 60px}.top{display:flex;align
 @media(max-width:760px){.layout{grid-template-columns:1fr}.hero{padding-top:32px}.top{align-items:flex-start}.row{grid-template-columns:1fr}textarea{min-height:270px}}
 </style></head>
 <body><main>
-<header class="top"><div class="brand"><div class="logo">M</div><div>M C++ STUDIO<br><small style="color:var(--muted);font-size:11px;font-weight:500">GITHUB EDITION</small></div></div><span class="pill">100% GitHub workflow</span></header>
-<section class="hero"><div class="eyebrow">WRITE · ENCODE · BUILD</div><h1>من كود C++ إلى<br><span style="color:var(--lime)">Windows EXE</span></h1><p>واجهة خفيفة لتحضير كودك وإرساله إلى GitHub Actions. البناء يتم على Windows باستخدام MSVC x64، بدون خادم خارجي أو مفاتيح API داخل المتصفح.</p></section>
+<header class="top"><div class="brand"><div class="logo">M</div><div>M C++ STUDIO<br><small style="color:var(--muted);font-size:11px;font-weight:500">GITHUB EDITION</small></div></div><span class="pill">BUILD · TEST · DOWNLOAD</span></header>
+<section class="hero"><div class="eyebrow">PASTE · BUILD · DOWNLOAD</div><h1>من كود C++ إلى<br><span style="color:var(--lime)">Windows EXE</span></h1><p>الصق الكود واضغط بناء. GitHub Actions يشغّل MSVC على Windows، وتتابع النتيجة وتحمل ملف EXE من نفس الصفحة.</p></section>
 <div class="layout">
-<section class="panel"><h2>01 / محرر المصدر</h2><div class="field"><label for="source">الصق كود C++ هنا</label><textarea id="source" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="#include <iostream>\n\nint main() {\n    std::cout << \"Hello, Windows!\";\n    return 0;\n}"></textarea><div class="meta"><span id="bytes">0 / 46,000 bytes</span><span>UTF-8 · Base64</span></div></div>
+<section class="panel"><h2>01 / محرر المصدر</h2><div class="field"><label for="source">الصق كود C++ هنا</label><textarea id="source" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="#include <iostream>\n\nint main() {\n    std::cout << \"Hello, Windows!\";\n    return 0;\n}"></textarea><div class="meta"><span id="bytes">0 / 46,000 bytes</span><span>UTF-8 · Windows x64</span></div></div>
 <div class="row"><div class="field"><label for="standard">معيار C++</label><select id="standard"><option value="c++20">C++20</option><option value="c++23">C++23</option><option value="c++17">C++17</option><option value="c++14">C++14</option></select></div><div class="field"><label for="subsystem">نوع التطبيق</label><select id="subsystem"><option value="CONSOLE">Console</option><option value="WINDOWS">Windows GUI</option></select></div></div>
-<div class="actions"><button class="primary" id="prepare">جهّز الكود للبناء ↗</button><button class="secondary" id="clear">مسح المحرر</button></div><div class="status" id="status" role="status"></div><div class="field" style="margin-top:14px"><label for="encoded">النص المشفّر Base64 — انسخه إلى نموذج GitHub</label><textarea id="encoded" readonly style="min-height:92px;color:#aeb8c3" placeholder="سيظهر هنا بعد تجهيز الكود"></textarea></div><button class="secondary" id="copy" style="width:100%">نسخ Base64</button></section>
-<aside class="panel"><h2>02 / تشغيل البناء على GitHub</h2>
-<div class="step"><span class="num">1</span><div><b>جهّز الكود</b><small>اضغط الزر وسيتم فحص الحجم وتحويل النص إلى Base64.</small></div></div>
-<div class="step"><span class="num">2</span><div><b>افتح Windows C++ Build</b><small>انتقل إلى صفحة Actions في المستودع.</small></div></div>
-<div class="step"><span class="num">3</span><div><b>Run workflow</b><small>الصق Base64 في source_b64، واختر نفس المعيار والنوع أعلاه، واكتب request_id فريد.</small></div></div>
-<div class="step"><span class="num">4</span><div><b>نزّل ملف EXE</b><small>بعد نجاح التشغيل، افتح Artifacts وحمّل الملف.</small></div></div>
-<a class="button primary" style="width:100%;margin-top:18px" href="https://github.com/moha700m/Pythonst3/actions/workflows/build-cpp-windows.yml" target="_blank" rel="noopener">فتح GitHub Actions ↗</a>
-<a class="button secondary" style="width:100%;margin-top:9px" href="https://github.com/moha700m/Pythonst3" target="_blank" rel="noopener">فتح المستودع</a>
-<div class="warning">مهم: GitHub Pages موقع ثابت، لذلك لا نخزّن Personal Access Token في المتصفح. يلزم تشغيل Workflow يدوياً من GitHub. هذا يمنع كشف صلاحيات المستودع للزوار.</div>
-<p class="hint" style="margin-top:14px">Windows GUI يُبنى كملف EXE فقط. GitHub-hosted runner لا يعرض نافذة البرنامج داخل صفحة الموقع ولا يشغّل ملفات المستخدم.</p>
+<div class="field" style="margin-top:14px"><label>تحقق الحماية قبل البناء</label><div class="cf-turnstile" data-sitekey="0x4AAAAAAGB2KH2DRpNPG2zX" data-theme="dark" data-callback="onTurnstileSuccess" data-expired-callback="onTurnstileExpired"></div></div><div class="actions"><button class="primary" id="build" style="flex:1">بناء تطبيق EXE الآن ↗</button><button class="secondary" id="clear">مسح المحرر</button></div><div class="status" id="status" role="status" aria-live="polite">الصق الكود ثم أكمل تحقق الحماية واضغط بناء.</div><div id="result" style="margin-top:12px"></div></section>
+<aside class="panel"><h2>02 / حالة البناء</h2>
+<div class="step"><span class="num">1</span><div><b>إرسال آمن</b><small>يُرسل المصدر إلى وسيط Cloudflare، ولا يظهر مفتاح GitHub في المتصفح.</small></div></div>
+<div class="step"><span class="num">2</span><div><b>بناء حقيقي على Windows</b><small>GitHub Actions + MSVC x64، مع اختيار Console أو Windows GUI.</small></div></div>
+<div class="step"><span class="num">3</span><div><b>متابعة مباشرة</b><small>الصفحة تتابع حالة الـ workflow تلقائياً حتى اكتمال البناء.</small></div></div>
+<div class="step"><span class="num">4</span><div><b>تحميل الناتج</b><small>عند النجاح يظهر رابط ZIP يحتوي EXE وملفات التشخيص.</small></div></div>
+<a class="button secondary" style="width:100%;margin-top:18px" href="https://github.com/moha700m/Pythonst3/actions" target="_blank" rel="noopener">سجل عمليات البناء ↗</a>
+<div class="warning">ملاحظة: البناء ينتج ملف EXE للتنزيل. لا يتم تشغيل برامج Windows داخل المتصفح أو عرض سطح مكتب Windows مباشر.</div>
+<p class="hint" style="margin-top:14px">لا تضع كلمات مرور أو مفاتيح API أو بيانات خاصة داخل كود الاختبار.</p>
 </aside></div>
 <div class="footer">M C++ Studio · Hosted with GitHub Pages · Built with GitHub Actions</div>
 </main>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script>
-const source=document.getElementById('source'), encoded=document.getElementById('encoded'), status=document.getElementById('status'), bytes=document.getElementById('bytes');
+const API="https://m-cpp-studio-api.saad-cloud-2026.workers.dev";
+const source=document.getElementById('source'),status=document.getElementById('status'),bytes=document.getElementById('bytes'),result=document.getElementById('result');
+let turnstileToken="",polling=false;
+window.onTurnstileSuccess=t=>{turnstileToken=t;status.textContent="تم التحقق. جاهز لإرسال البناء."};
+window.onTurnstileExpired=()=>{turnstileToken="";status.textContent="انتهى التحقق؛ أعد المحاولة."};
 function getBytes(){return new TextEncoder().encode(source.value)}
-function update(){const n=getBytes().length;bytes.textContent=n.toLocaleString()+' / 46,000 bytes';bytes.style.color=n>46000?'#ff7777':'#87919c'}
-source.addEventListener('input',update);
-document.getElementById('prepare').addEventListener('click',()=>{const raw=getBytes();if(!source.value.trim()){status.textContent='الصق كود C++ أولاً.';return}if(raw.length>46000){status.textContent='حجم الكود يتجاوز 46,000 بايت.';return}let binary='';for(let i=0;i<raw.length;i+=0x8000)binary+=String.fromCharCode(...raw.subarray(i,i+0x8000));encoded.value=btoa(binary);status.textContent='جاهز: '+raw.length.toLocaleString()+' بايت. في GitHub اختر '+document.getElementById('standard').value+' و'+document.getElementById('subsystem').value+' ثم الصق Base64.';});
-document.getElementById('copy').addEventListener('click',async()=>{if(!encoded.value){status.textContent='جهّز الكود أولاً.';return}try{await navigator.clipboard.writeText(encoded.value);status.textContent='تم نسخ Base64.'}catch{encoded.focus();encoded.select();status.textContent='حدّد النص وانسخه يدوياً.'}});
-document.getElementById('clear').addEventListener('click',()=>{source.value='';encoded.value='';status.textContent='تم مسح المحرر.';update()});
+function update(){const n=getBytes().length;bytes.textContent=n.toLocaleString()+" / 46,000 bytes";bytes.style.color=n>46000?"#ff7777":"#87919c"}
+source.addEventListener("input",update);
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+async function poll(id){if(polling)return;polling=true;const began=Date.now();while(Date.now()-began<720000){try{const r=await fetch(API+"/status?id="+encodeURIComponent(id));const d=await r.json();if(d.found&&d.status==="completed"){if(d.conclusion==="success"){status.textContent="اكتمل البناء بنجاح.";result.innerHTML='<a class="button primary" style="width:100%" href="'+API+'/artifact?run_id='+encodeURIComponent(d.run_id)+'">تحميل ملفات البناء ZIP ↓</a><p class="hint">الملف يحتوي EXE وملفات السجل. فك الضغط للعثور على main.exe.</p><a class="hint" href="'+esc(d.run_url)+'" target="_blank" rel="noopener">عرض تفاصيل البناء في GitHub</a>'}else{status.textContent="فشل البناء. افتح سجل GitHub لمعرفة الخطأ.";result.innerHTML='<a class="button secondary" href="'+esc(d.run_url||"https://github.com/moha700m/Pythonst3/actions")+'" target="_blank" rel="noopener">فتح سجل الخطأ</a>'}polling=false;return}status.textContent="البناء قيد الانتظار أو التنفيذ على Windows…"}catch(e){status.textContent="تعذر تحديث الحالة؛ سنحاول مجدداً…"}await new Promise(r=>setTimeout(r,5000))}status.textContent="ما زال البناء جارياً. تابع سجل GitHub من الرابط أدناه.";polling=false}
+document.getElementById("build").addEventListener("click",async()=>{const raw=getBytes();if(!source.value.trim()){status.textContent="الصق كود C++ أولاً.";return}if(raw.length>46000){status.textContent="حجم الكود يتجاوز 46,000 بايت.";return}if(!turnstileToken){status.textContent="أكمل تحقق الحماية أولاً.";return}const button=document.getElementById("build");button.disabled=true;button.textContent="جارٍ إرسال طلب البناء…";result.innerHTML="";try{const response=await fetch(API+"/build",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({source:source.value,standard:document.getElementById("standard").value,subsystem:document.getElementById("subsystem").value,turnstileToken})});const data=await response.json();if(!response.ok)throw new Error(data.error||"تعذر إرسال البناء");status.textContent=data.message||"تم إرسال الطلب.";turnstileToken="";if(window.turnstile)window.turnstile.reset();poll(data.request_id)}catch(e){status.textContent=e.message;turnstileToken="";if(window.turnstile)window.turnstile.reset()}finally{button.disabled=false;button.textContent="بناء تطبيق EXE الآن ↗"}});
+document.getElementById("clear").addEventListener("click",()=>{source.value="";result.innerHTML="";status.textContent="تم مسح المحرر.";update()});
 update();
 </script></body></html>
