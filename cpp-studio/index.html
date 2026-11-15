@@ -60,8 +60,41 @@ async function loadPreview(runId){
   caption.textContent=infoText.includes("PREVIEW_KIND=live-window")?"لقطة شاشة فعلية لنافذة البرنامج أثناء تشغيله على Windows.": "صورة مخرجات البرنامج بعد تشغيله على Windows (Console).";
  }catch(e){caption.textContent="تعذر عرض المعاينة: "+e.message;img.removeAttribute("src");img.style.display="none";document.getElementById("previewPlaceholder").style.display="block"}
 }
-async function poll(id){if(polling)return;polling=true;const began=Date.now();while(Date.now()-began<720000){try{const r=await fetch(API+"/status?id="+encodeURIComponent(id));const d=await r.json();if(d.found&&d.status==="completed"){if(d.conclusion==="success"){status.textContent="اكتمل البناء والتشغيل التجريبي.";result.innerHTML='<a class="button primary" style="width:100%" href="'+API+'/artifact?run_id='+encodeURIComponent(d.run_id)+'">تحميل EXE وملفات البناء ZIP ↓</a><p class="hint">تم تشغيل البرنامج على Windows ومحاولة التقاط المعاينة أدناه.</p><a class="hint" href="'+esc(d.run_url)+'" target="_blank" rel="noopener">عرض تفاصيل البناء في GitHub</a>';loadPreview(d.run_id)}else{status.textContent="فشل البناء. افتح سجل GitHub لمعرفة الخطأ.";result.innerHTML='<a class="button secondary" href="'+esc(d.run_url||"https://github.com/moha700m/Pythonst3/actions")+'" target="_blank" rel="noopener">فتح سجل الخطأ</a>'}polling=false;return}status.textContent="البناء قيد الانتظار أو التنفيذ على Windows…"}catch(e){status.textContent="تعذر تحديث الحالة؛ سنحاول مجدداً…"}await new Promise(r=>setTimeout(r,5000))}status.textContent="ما زال البناء جارياً. تابع سجل GitHub من الرابط أدناه.";polling=false}
-document.getElementById("build").addEventListener("click",async()=>{const raw=getBytes();if(!source.value.trim()){status.textContent="الصق كود C++ أولاً.";return}if(raw.length>46000){status.textContent="حجم الكود يتجاوز 46,000 بايت.";return}if(!turnstileToken){status.textContent="أكمل تحقق الحماية أولاً.";return}const button=document.getElementById("build");button.disabled=true;button.textContent="جارٍ إرسال طلب البناء…";result.innerHTML="";try{const response=await fetch(API+"/build",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({source:source.value,standard:document.getElementById("standard").value,subsystem:document.getElementById("subsystem").value,turnstileToken})});const data=await response.json();if(!response.ok)throw new Error(data.error||"تعذر إرسال البناء");status.textContent=data.message||"تم إرسال الطلب.";turnstileToken="";if(window.turnstile)window.turnstile.reset();poll(data.request_id)}catch(e){status.textContent=e.message;turnstileToken="";if(window.turnstile)window.turnstile.reset()}finally{button.disabled=false;button.textContent="بناء تطبيق EXE الآن ↗"}});
+async function poll(id){
+ if(!id){status.textContent="وصل رد البناء بدون رقم طلب. حدّث الصفحة وحاول مرة ثانية.";return}
+ if(polling)return;
+ polling=true;
+ const began=Date.now();
+ status.textContent="تم إرسال الطلب إلى GitHub Actions. جاري انتظار بدء البناء…";
+ result.innerHTML='<div class="warning">تم استلام طلبك. لا تقفل الصفحة؛ عادةً يستغرق البناء والتشغيل التجريبي من دقيقة إلى 4 دقائق.</div>';
+ try{
+  while(Date.now()-began<720000){
+   try{
+    const r=await fetch(API+"/status?id="+encodeURIComponent(id),{cache:"no-store"});
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||"تعذر قراءة حالة البناء");
+    const elapsed=Math.floor((Date.now()-began)/1000);
+    const mins=Math.floor(elapsed/60),secs=elapsed%60;
+    if(d.found&&d.status==="completed"){
+     if(d.conclusion==="success"){
+      status.textContent="اكتمل البناء بنجاح بعد "+mins+" دقيقة و"+secs+" ثانية. جاري تجهيز المعاينة…";
+      result.innerHTML='<a class="button primary" style="width:100%" href="'+API+'/artifact?run_id='+encodeURIComponent(d.run_id)+'">تحميل EXE وملفات البناء ZIP ↓</a><p class="hint">صورة البرنامج تظهر في قسم «المعاينة هنا» أسفل الصفحة.</p>';
+      await loadPreview(d.run_id);
+     }else{
+      status.textContent="فشل البناء بعد "+mins+" دقيقة. راجع الكود وحاول مرة ثانية.";
+      result.innerHTML='<div class="warning">فشل بناء التطبيق على Windows. تأكد من نوع المشروع والكود، ثم أعد المحاولة.</div>';
+     }
+     return;
+    }
+    if(d.found&&d.status==="in_progress")status.textContent="جاري بناء وتشغيل التطبيق على Windows… ("+mins+":"+String(secs).padStart(2,"0")+")";
+    else status.textContent="تم إرسال الطلب؛ ننتظر GitHub يبدأ البناء… ("+mins+":"+String(secs).padStart(2,"0")+")";
+   }catch(e){status.textContent="طلبك ما زال محفوظاً؛ تعذّر تحديث الحالة مؤقتاً: "+e.message}
+   await new Promise(r=>setTimeout(r,5000));
+  }
+  status.textContent="البناء أخذ وقت أطول من المعتاد. طلبك أُرسل؛ حدّث الصفحة لاحقاً وتحقق من النتيجة.";
+ }finally{polling=false}
+}
+document.getElementById("build").addEventListener("click",async()=>{const raw=getBytes();if(!source.value.trim()){status.textContent="الصق كود C++ أولاً.";return}if(raw.length>46000){status.textContent="حجم الكود يتجاوز 46,000 بايت.";return}if(!turnstileToken){status.textContent="أكمل تحقق الحماية أولاً.";return}const button=document.getElementById("build");button.disabled=true;button.textContent="جارٍ إرسال طلب البناء…";status.textContent="جاري إرسال الكود إلى خدمة البناء…";result.innerHTML="";try{const response=await fetch(API+"/build",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({source:source.value,standard:document.getElementById("standard").value,subsystem:document.getElementById("subsystem").value,turnstileToken})});const data=await response.json();if(!response.ok)throw new Error(data.error||"تعذر إرسال البناء");turnstileToken="";if(window.turnstile)window.turnstile.reset();await poll(data.request_id)}catch(e){status.textContent="ما تم إرسال الطلب: "+e.message;turnstileToken="";if(window.turnstile)window.turnstile.reset()}finally{button.disabled=false;button.textContent="بناء تطبيق EXE الآن ↗"}});
 document.getElementById("clear").addEventListener("click",()=>{source.value="";result.innerHTML="";status.textContent="تم مسح المحرر.";update()});
 update();
 </script></body></html>
