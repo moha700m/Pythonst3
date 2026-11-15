@@ -84,8 +84,8 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $exe = Join-Path $PWD 'artifacts\main.exe'
           $log = Join-Path $PWD 'artifacts\build.log'
-          $args = @('/nologo', "/std:$env:CPP_STANDARD", '/EHsc', '/W4', '/utf-8', '/DUNICODE', '/D_UNICODE', 'main.cpp', '/link', "/SUBSYSTEM:$env:CPP_SUBSYSTEM", "/OUT:$exe")
-          & cl.exe @args 2>&1 | Tee-Object -FilePath $log
+          $compilerArgs = @('/nologo', "/std:$env:CPP_STANDARD", '/EHsc', '/W4', '/utf-8', '/DUNICODE', '/D_UNICODE', 'main.cpp', '/link', "/SUBSYSTEM:$env:CPP_SUBSYSTEM", "/OUT:$exe")
+          & cl.exe @compilerArgs 2>&1 | Tee-Object -FilePath $log
           $code = $LASTEXITCODE
           if ($code -ne 0) {
             Write-Error "MSVC compilation failed with exit code $code. See artifacts/build.log."
