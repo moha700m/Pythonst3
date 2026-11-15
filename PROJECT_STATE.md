@@ -109,3 +109,8 @@
 - هذا المسار مستقل تماماً عن تطبيق Pythonst3 وملف IPA؛ لا يغيّر SwiftUI أو CPython.
 - لا يشغّل الملف التنفيذي الناتج ولا يوفّر سطح مكتب تفاعلياً. معاينة نافذة Windows تتطلب Runner ذاتياً بجلسة مستخدم تفاعلية.
 - رمز GitHub المستخدم من تطبيق M C++ Studio محفوظ في AppDeploy Secrets فقط، وليس داخل المستودع.
+- **أحدث اختبار فعلي:** GitHub Actions run [43700976649](https://github.com/moha700m/Pythonst3/actions/runs/43700976649) — success.
+- **الناتج:** `main.exe` بصيغة PE32+ x64، حجم 212,992 بايت، وArtifact `windows-cpp-build-43700976649` (14156014356).
+- **SHA-256 للـ EXE:** `b6571a37efdef51a36c51f81b8e51d4ce48901e53440b41f8b5fb334549b024e`.
+- اختبار smoke استخدم C++20/Console؛ لم يتم تشغيل EXE، بل التحقق من بنائه ورفعه فقط.
+- إعداد MSVC يتم عبر `vswhere.exe` و`VsDevCmd.bat` المدمجين في Visual Studio، بدون اعتماد على Action خارجي لتجهيز المترجم.
