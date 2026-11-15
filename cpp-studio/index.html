@@ -21,7 +21,7 @@ main{max-width:1080px;margin:auto;padding:28px 18px 60px}.top{display:flex;align
 <aside class="panel"><h2>02 / تشغيل البناء على GitHub</h2>
 <div class="step"><span class="num">1</span><div><b>جهّز الكود</b><small>اضغط الزر وسيتم فحص الحجم وتحويل النص إلى Base64.</small></div></div>
 <div class="step"><span class="num">2</span><div><b>افتح Windows C++ Build</b><small>انتقل إلى صفحة Actions في المستودع.</small></div></div>
-<div class="step"><span class="num">3</span><div><b>Run workflow</b><small>الصق Base64 في source_b64، واستخدم request_id فريد.</small></div></div>
+<div class="step"><span class="num">3</span><div><b>Run workflow</b><small>الصق Base64 في source_b64، واختر نفس المعيار والنوع أعلاه، واكتب request_id فريد.</small></div></div>
 <div class="step"><span class="num">4</span><div><b>نزّل ملف EXE</b><small>بعد نجاح التشغيل، افتح Artifacts وحمّل الملف.</small></div></div>
 <a class="button primary" style="width:100%;margin-top:18px" href="https://github.com/moha700m/Pythonst3/actions/workflows/build-cpp-windows.yml" target="_blank" rel="noopener">فتح GitHub Actions ↗</a>
 <a class="button secondary" style="width:100%;margin-top:9px" href="https://github.com/moha700m/Pythonst3" target="_blank" rel="noopener">فتح المستودع</a>
@@ -35,7 +35,7 @@ const source=document.getElementById('source'), encoded=document.getElementById(
 function getBytes(){return new TextEncoder().encode(source.value)}
 function update(){const n=getBytes().length;bytes.textContent=n.toLocaleString()+' / 46,000 bytes';bytes.style.color=n>46000?'#ff7777':'#87919c'}
 source.addEventListener('input',update);
-document.getElementById('prepare').addEventListener('click',()=>{const raw=getBytes();if(!source.value.trim()){status.textContent='الصق كود C++ أولاً.';return}if(raw.length>46000){status.textContent='حجم الكود يتجاوز 46,000 بايت.';return}let binary='';for(let i=0;i<raw.length;i+=0x8000)binary+=String.fromCharCode(...raw.subarray(i,i+0x8000));encoded.value=btoa(binary);status.textContent='تم تجهيز '+raw.length.toLocaleString()+' بايت. انسخ Base64 إلى نموذج GitHub.';});
+document.getElementById('prepare').addEventListener('click',()=>{const raw=getBytes();if(!source.value.trim()){status.textContent='الصق كود C++ أولاً.';return}if(raw.length>46000){status.textContent='حجم الكود يتجاوز 46,000 بايت.';return}let binary='';for(let i=0;i<raw.length;i+=0x8000)binary+=String.fromCharCode(...raw.subarray(i,i+0x8000));encoded.value=btoa(binary);status.textContent='جاهز: '+raw.length.toLocaleString()+' بايت. في GitHub اختر '+document.getElementById('standard').value+' و'+document.getElementById('subsystem').value+' ثم الصق Base64.';});
 document.getElementById('copy').addEventListener('click',async()=>{if(!encoded.value){status.textContent='جهّز الكود أولاً.';return}try{await navigator.clipboard.writeText(encoded.value);status.textContent='تم نسخ Base64.'}catch{encoded.focus();encoded.select();status.textContent='حدّد النص وانسخه يدوياً.'}});
 document.getElementById('clear').addEventListener('click',()=>{source.value='';encoded.value='';status.textContent='تم مسح المحرر.';update()});
 update();
