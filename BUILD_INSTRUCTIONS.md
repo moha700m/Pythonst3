@@ -79,7 +79,7 @@ shasum -a 256 Pythonst3-unsigned.ipa
 
 - Workflow: `.github/workflows/build-cpp-windows.yml`
 - Runner: `windows-latest` مع MSVC x64 (يُجهّز عبر `vswhere.exe` و`VsDevCmd.bat`).
-- اختبار smoke موثق بنجاح: [run 43700976649](https://github.com/moha700m/Pythonst3/actions/runs/43700976649)، وArtifact يحتوي `main.exe` بحجم 212,992 بايت.
+- اختبارات smoke موثقة بنجاح: [run 43701227488](https://github.com/moha700m/Pythonst3/actions/runs/43701227488)، ويحتوي Artifact على Console EXE بحجم 212,992 بايت وGUI EXE بحجم 99,840 بايت.
 - المعايير: C++14 وC++17 وC++20 وC++23.
 - الأنواع: `CONSOLE` أو `WINDOWS`.
 - الناتج: `main.exe` و`main.cpp` و`build.log` و`build-info.txt` داخل Artifact ZIP لمدة 3 أيام.
