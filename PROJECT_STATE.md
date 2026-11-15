@@ -109,8 +109,9 @@
 - هذا المسار مستقل تماماً عن تطبيق Pythonst3 وملف IPA؛ لا يغيّر SwiftUI أو CPython.
 - لا يشغّل الملف التنفيذي الناتج ولا يوفّر سطح مكتب تفاعلياً. معاينة نافذة Windows تتطلب Runner ذاتياً بجلسة مستخدم تفاعلية.
 - رمز GitHub المستخدم من تطبيق M C++ Studio محفوظ في AppDeploy Secrets فقط، وليس داخل المستودع.
-- **أحدث اختبار فعلي:** GitHub Actions run [43700976649](https://github.com/moha700m/Pythonst3/actions/runs/43700976649) — success.
-- **الناتج:** `main.exe` بصيغة PE32+ x64، حجم 212,992 بايت، وArtifact `windows-cpp-build-43700976649` (14156014356).
-- **SHA-256 للـ EXE:** `b6571a37efdef51a36c51f81b8e51d4ce48901e53440b41f8b5fb334549b024e`.
-- اختبار smoke استخدم C++20/Console؛ لم يتم تشغيل EXE، بل التحقق من بنائه ورفعه فقط.
+- **أحدث اختبار فعلي للـ Console وGUI:** GitHub Actions run [43701227488](https://github.com/moha700m/Pythonst3/actions/runs/43701227488) — success.
+- **Console:** `main.exe` بصيغة PE32+ x64، حجم 212,992 بايت، SHA-256 `ce8d928ae860de0712ed19d57a5ac3ac44e215d6c46960f2f1c2d1d9cc899d68`.
+- **Windows GUI:** `main-gui.exe` بصيغة PE32+ GUI x64، حجم 99,840 بايت، SHA-256 `63f54676532c9327a56fabc19eace0e515e7d4557fdba81ba9f483261bd22700`.
+- Artifact `windows-cpp-build-43701227488` (14156084550) يحتوي الملفين والمصدر وسجلات البناء.
+- اختبار smoke استخدم C++20؛ تم التحقق من بناء PE32+ Console وGUI ورفع الملفين، ولم يتم تشغيلهما داخل الـ Runner.
 - إعداد MSVC يتم عبر `vswhere.exe` و`VsDevCmd.bat` المدمجين في Visual Studio، بدون اعتماد على Action خارجي لتجهيز المترجم.
