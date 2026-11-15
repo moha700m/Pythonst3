@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/build-cpp-windows.yml"
       - "windows-build/smoke.cpp"
+      - "windows-build/smoke-gui.cpp"
   workflow_dispatch:
     inputs:
       request_id:
@@ -120,6 +121,42 @@ jobs:
           "EXE_SHA256=$hash" | Out-File -FilePath artifacts/build-info.txt -Append -Encoding utf8
           "EXE_BYTES=$((Get-Item $exe).Length)" | Out-File -FilePath artifacts/build-info.txt -Append -Encoding utf8
           Get-Item $exe | Format-List Name,Length,LastWriteTime
+
+      - name: Compile native Windows GUI smoke test
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          CPP_STANDARD: ${{ github.event.client_payload.standard || inputs.standard || 'c++20' }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $guiSource = Join-Path $PWD 'windows-build\smoke-gui.cpp'
+          $guiExe = Join-Path $PWD 'artifacts\main-gui.exe'
+          $guiLog = Join-Path $PWD 'artifacts\gui-build.log'
+          Copy-Item $guiSource artifacts/smoke-gui.cpp
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $vsInstall = & $vswhere -latest -products '*' -requires 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64' -property installationPath | Select-Object -First 1
+          if ([string]::IsNullOrWhiteSpace($vsInstall)) { throw 'No Visual Studio installation with the x64 C++ toolchain was found for GUI smoke test.' }
+          $devCmd = Join-Path $vsInstall.Trim() 'Common7\Tools\VsDevCmd.bat'
+          if (-not (Test-Path $devCmd)) { throw 'VsDevCmd.bat was not found for GUI smoke test.' }
+          $cmdPath = Join-Path $env:RUNNER_TEMP 'mcpp-gui-smoke.cmd'
+          $cmdText = @"
+          @echo off
+          call "$devCmd" -no_logo -arch=x64 -host_arch=x64
+          if errorlevel 1 exit /b %errorlevel%
+          cl.exe /nologo /std:$env:CPP_STANDARD /EHsc /W4 /utf-8 /O1 /MT /DUNICODE /D_UNICODE "$guiSource" /link /OPT:REF /OPT:ICF /SUBSYSTEM:WINDOWS /OUT:"$guiExe"
+          exit /b %errorlevel%
+          "@
+          Set-Content -Path $cmdPath -Value $cmdText -Encoding ascii
+          cmd.exe /d /c $cmdPath 2>&1 | Tee-Object -FilePath $guiLog
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            Write-Error "MSVC GUI smoke compilation failed with exit code $code. See artifacts/gui-build.log."
+            exit $code
+          }
+          if (-not (Test-Path $guiExe)) { throw 'GUI compiler returned success but main-gui.exe was not created.' }
+          $guiHash = (Get-FileHash $guiExe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "GUI_EXE_SHA256=$guiHash" | Out-File -FilePath artifacts/build-info.txt -Append -Encoding utf8
+          "GUI_EXE_BYTES=$((Get-Item $guiExe).Length)" | Out-File -FilePath artifacts/build-info.txt -Append -Encoding utf8
 
       - name: Upload Windows EXE and diagnostics
         if: always()
