@@ -55,6 +55,8 @@ jobs:
     steps:
       - name: Checkout smoke-test source
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Prepare isolated build workspace
         shell: pwsh
@@ -157,6 +159,118 @@ jobs:
           $guiHash = (Get-FileHash $guiExe -Algorithm SHA256).Hash.ToLowerInvariant()
           "GUI_EXE_SHA256=$guiHash" | Out-File -FilePath artifacts/build-info.txt -Append -Encoding utf8
           "GUI_EXE_BYTES=$((Get-Item $guiExe).Length)" | Out-File -FilePath artifacts/build-info.txt -Append -Encoding utf8
+
+      - name: Run Windows app and capture preview
+        if: always()
+        shell: pwsh
+        env:
+          CPP_SUBSYSTEM: \${{ github.event.client_payload.subsystem || inputs.subsystem || 'CONSOLE' }}
+          EVENT_NAME: \${{ github.event_name }}
+        run: |
+          $ErrorActionPreference = 'Continue'
+          Add-Type -AssemblyName System.Drawing
+          $preview = Join-Path $PWD 'artifacts\preview.png'
+          $exe = Join-Path $PWD 'artifacts\main.exe'
+          $kind = 'console-output'
+          $status = 'No preview captured.'
+          if ($env:EVENT_NAME -eq 'push') {
+            $candidate = Join-Path $PWD 'artifacts\main-gui.exe'
+            if (Test-Path $candidate) {
+              $exe = $candidate
+              $env:CPP_SUBSYSTEM = 'WINDOWS'
+            }
+          }
+          if (-not (Test-Path $exe)) {
+            $status = 'Build did not produce an EXE; preview skipped.'
+          } elseif ($env:CPP_SUBSYSTEM -eq 'WINDOWS') {
+            $kind = 'live-window'
+            try {
+              Add-Type -TypeDefinition @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class MCppWin32 {
+            [StructLayout(LayoutKind.Sequential)]
+            public struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
+            [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+            [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+            [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+          }
+          '@
+              $proc = Start-Process -FilePath $exe -PassThru
+              $hwnd = [IntPtr]::Zero
+              for ($i = 0; $i -lt 18; $i++) {
+                Start-Sleep -Seconds 1
+                $proc.Refresh()
+                if ($proc.HasExited) { break }
+                $hwnd = $proc.MainWindowHandle
+                if ($hwnd -ne [IntPtr]::Zero) { break }
+              }
+              if ($hwnd -eq [IntPtr]::Zero) {
+                throw 'The app did not expose a capturable Windows window within 18 seconds.'
+              }
+              [MCppWin32]::ShowWindow($hwnd, 9) | Out-Null
+              [MCppWin32]::SetForegroundWindow($hwnd) | Out-Null
+              Start-Sleep -Seconds 2
+              $rect = New-Object MCppWin32+RECT
+              if (-not [MCppWin32]::GetWindowRect($hwnd, [ref]$rect)) { throw 'GetWindowRect failed.' }
+              $width = $rect.Right - $rect.Left
+              $height = $rect.Bottom - $rect.Top
+              if ($width -lt 80 -or $height -lt 60) { throw 'The application window size is too small to capture.' }
+              $bmp = New-Object System.Drawing.Bitmap($width, $height)
+              $graphics = [System.Drawing.Graphics]::FromImage($bmp)
+              $graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, $bmp.Size)
+              $bmp.Save($preview, [System.Drawing.Imaging.ImageFormat]::Png)
+              $graphics.Dispose()
+              $bmp.Dispose()
+              $status = "Captured the real application window ($width x $height)."
+              if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue }
+            } catch {
+              $status = "Real GUI screenshot unavailable: $($_.Exception.Message)"
+              if ($proc -and -not $proc.HasExited) { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue }
+            }
+          } else {
+            $outFile = Join-Path $env:RUNNER_TEMP 'cpp-preview-stdout.txt'
+            $errFile = Join-Path $env:RUNNER_TEMP 'cpp-preview-stderr.txt'
+            try {
+              $proc = Start-Process -FilePath $exe -PassThru -RedirectStandardOutput $outFile -RedirectStandardError $errFile
+              if (-not $proc.WaitForExit(8000)) {
+                Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+                $status = 'Console process exceeded the 8-second preview limit and was stopped.'
+              } else {
+                $status = "Console program exited with code $($proc.ExitCode)."
+              }
+            } catch {
+              $status = "Console launch failed: $($_.Exception.Message)"
+            }
+            $stdout = if (Test-Path $outFile) { Get-Content -Raw $outFile } else { '' }
+            $stderr = if (Test-Path $errFile) { Get-Content -Raw $errFile } else { '' }
+            $lines = @('M C++ STUDIO  /  CONSOLE OUTPUT', '', $status, '')
+            if ($stdout) { $lines += ($stdout -split "\r?\n") }
+            if ($stderr) { $lines += '', '[stderr]', ($stderr -split "\r?\n") }
+            if ($lines.Count -le 4) { $lines += '(The program produced no standard output.)' }
+            $bmp = New-Object System.Drawing.Bitmap(1200, 760)
+            $graphics = [System.Drawing.Graphics]::FromImage($bmp)
+            $graphics.Clear([System.Drawing.Color]::FromArgb(12, 16, 22))
+            $font = New-Object System.Drawing.Font('Consolas', 15)
+            $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(218, 230, 210))
+            $y = 34
+            foreach ($line in $lines) {
+              if ($y -gt 710) { break }
+              $graphics.DrawString([string]$line, $font, $brush, 34, $y)
+              $y += 25
+            }
+            $graphics.Dispose(); $font.Dispose(); $brush.Dispose()
+            $bmp.Save($preview, [System.Drawing.Imaging.ImageFormat]::Png)
+            $bmp.Dispose()
+          }
+          "PREVIEW_KIND=$kind" | Out-File -FilePath artifacts/build-info.txt -Append -Encoding utf8
+          $status | Out-File -FilePath artifacts/preview-status.txt -Encoding utf8
+          if (Test-Path $preview) {
+            "PREVIEW_BYTES=$((Get-Item $preview).Length)" | Out-File -FilePath artifacts/build-info.txt -Append -Encoding utf8
+            Write-Host "Preview image created: $preview"
+          } else {
+            Write-Warning $status
+          }
 
       - name: Upload Windows EXE and diagnostics
         if: always()
