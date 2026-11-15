@@ -85,11 +85,6 @@ jobs:
           "SUBSYSTEM=$env:CPP_SUBSYSTEM" | Out-File -FilePath artifacts/build-info.txt -Append -Encoding utf8
           "SOURCE_BYTES=$($bytes.Length)" | Out-File -FilePath artifacts/build-info.txt -Append -Encoding utf8
 
-      - name: Configure MSVC toolchain
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
       - name: Compile with MSVC
         shell: pwsh
         env:
@@ -99,8 +94,22 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $exe = Join-Path $PWD 'artifacts\main.exe'
           $log = Join-Path $PWD 'artifacts\build.log'
-          $compilerArgs = @('/nologo', "/std:$env:CPP_STANDARD", '/EHsc', '/W4', '/utf-8', '/O1', '/MT', '/DUNICODE', '/D_UNICODE', 'main.cpp', '/link', '/OPT:REF', '/OPT:ICF', "/SUBSYSTEM:$env:CPP_SUBSYSTEM", "/OUT:$exe")
-          & cl.exe @compilerArgs 2>&1 | Tee-Object -FilePath $log
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          if (-not (Test-Path $vswhere)) { throw 'Visual Studio locator (vswhere.exe) was not found.' }
+          $vsInstall = & $vswhere -latest -products '*' -requires 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64' -property installationPath | Select-Object -First 1
+          if ([string]::IsNullOrWhiteSpace($vsInstall)) { throw 'No Visual Studio installation with the x64 C++ toolchain was found.' }
+          $devCmd = Join-Path $vsInstall.Trim() 'Common7\Tools\VsDevCmd.bat'
+          if (-not (Test-Path $devCmd)) { throw 'VsDevCmd.bat was not found in the Visual Studio installation.' }
+          $cmdPath = Join-Path $env:RUNNER_TEMP 'mcpp-build.cmd'
+          $cmdText = @"
+          @echo off
+          call "$devCmd" -no_logo -arch=x64 -host_arch=x64
+          if errorlevel 1 exit /b %errorlevel%
+          cl.exe /nologo /std:$env:CPP_STANDARD /EHsc /W4 /utf-8 /O1 /MT /DUNICODE /D_UNICODE main.cpp /link /OPT:REF /OPT:ICF /SUBSYSTEM:$env:CPP_SUBSYSTEM /OUT:"$exe"
+          exit /b %errorlevel%
+          "@
+          Set-Content -Path $cmdPath -Value $cmdText -Encoding ascii
+          cmd.exe /d /c $cmdPath 2>&1 | Tee-Object -FilePath $log
           $code = $LASTEXITCODE
           if ($code -ne 0) {
             Write-Error "MSVC compilation failed with exit code $code. See artifacts/build.log."
