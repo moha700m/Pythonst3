@@ -164,10 +164,11 @@ jobs:
         if: always()
         shell: pwsh
         env:
-          CPP_SUBSYSTEM: \${{ github.event.client_payload.subsystem || inputs.subsystem || 'CONSOLE' }}
-          EVENT_NAME: \${{ github.event_name }}
+          CPP_SUBSYSTEM: ${{ github.event.client_payload.subsystem || inputs.subsystem || 'CONSOLE' }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           $ErrorActionPreference = 'Continue'
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
           Add-Type -AssemblyName System.Drawing
           $preview = Join-Path $PWD 'artifacts\preview.png'
           $exe = Join-Path $PWD 'artifacts\main.exe'
